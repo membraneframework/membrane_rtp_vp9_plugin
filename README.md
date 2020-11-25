@@ -1,4 +1,4 @@
-# Membrane Multimedia Framework: Template Plugin
+# Membrane Multimedia Framework: RTP VP9
 
 [![Hex.pm](https://img.shields.io/hexpm/v/membrane_template_plugin.svg)](https://hex.pm/packages/membrane_template_plugin)
 [![CircleCI](https://circleci.com/gh/membraneframework/membrane_template_plugin.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_template_plugin)
@@ -30,3 +30,4 @@ Copyright 2020, [Software Mansion](https://swmansion.com/?utm_source=git&utm_med
 [![Software Mansion](https://logo.swmansion.com/logo?color=white&variant=desktop&width=200&tag=membrane-github)](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane_template_plugin)
 
 Licensed under the [Apache License, Version 2.0](LICENSE)
+
