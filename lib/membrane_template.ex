@@ -1,2 +1,2 @@
-defmodule Membrane.Template do
+defmodule Membrane.RTP.VP9 do
 end

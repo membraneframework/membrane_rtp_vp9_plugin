@@ -3,20 +3,18 @@
 [![Hex.pm](https://img.shields.io/hexpm/v/membrane_template_plugin.svg)](https://hex.pm/packages/membrane_template_plugin)
 [![CircleCI](https://circleci.com/gh/membraneframework/membrane_template_plugin.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_template_plugin)
 
-This repository contains a template for new elements.
-
-Check out different branches for other flavours of template.
+This repository provides elements for payloading and depayloading VP9.
 
 It is part of [Membrane Multimedia Framework](https://membraneframework.org).
 
 ## Installation
 
-The package can be installed by adding `membrane_template_plugin` to your list of dependencies in `mix.exs`:
+The package can be installed by adding `membrane_rtp_vp9_plugin` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:membrane_template_plugin, "~> 0.1.0"}
+    {:membrane_rtp_vp9_plugin, "~> 0.1.0"}
   ]
 end
 ```
