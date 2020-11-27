@@ -44,8 +44,13 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   #   @spec parse_payload_descriptor(binary()) :: {:error, :malformed_data} | {:ok, {t(), binary()}}
   def parse_payload_descriptor(raw_payload)
 
-  def parse_payload_descriptor(<<header, rest::binary()>>) do
-    {:error}
+  def parse_payload_descriptor(<<header::binary-size(1), rest::binary()>>) do
+    {pid, rest} = get_pid(header, rest)
+    {layer_indices, rest} = get_layer_indices(header, rest)
+    {p_diffs, rest} = get_pdiffs(header, rest, 0)
+    {ss, rest} = get_scalability_structure(header, rest)
+
+    {header <> layer_indices <> p_diffs <> ss, rest}
   end
 
   # no picture id (PID)
@@ -86,18 +91,67 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
 
   defp get_pdiffs(
          <<_i::1, 1::1, _l::1, 1::1, _::4>> = header,
-         <<p_diff::binary-size(7), n::1, rest::binary>> = rest,
+         <<p_diff::binary-size(1), rest::binary>> = rest,
          diff_count
        )
        when diff_count < 3 do
+    <<_::7, n::1>> = p_diff
+
     case n do
       1 ->
-        p_diff <> get_pdiffs(header, rest, diff_count + 1)
+        {next_p_diff, rest} = get_pdiffs(header, rest, diff_count + 1)
+        {p_diff <> next_p_diff, rest}
 
       _ ->
-        p_diff
+        {p_diff, rest}
     end
   end
 
-  defp get_pdiffs(_,_,_), do: <<>>
+  defp get_pdiffs(_, rest, _), do: {<<>>, rest}
+
+  # no scalability structure
+  defp get_scalability_structure(<<_iplfbe::6, 0::1, _z::1>>, rest), do: {<<>>, rest}
+
+  defp get_scalability_structure(<<_iplfbe::6, 1::1, _z::1>>, rest) do
+    <<ss_header::binary-size(1), rest::binary()>> = rest
+    {widths_and_heights, rest} = ss_get_widths_heights(ss_header, rest, 0)
+    {pg_descriptions, rest} = ss_get_pg_description(ss_header, rest)
+
+    {ss_header <> widths_and_heights <> pg_descriptions, rest}
+  end
+
+  defp ss_get_widths_heights(<<n_s::3, 1::1, _g::1, _::3>> = ss_header, rest, count)
+       when count <= n_s do
+    <<width_height::binary-size(4), rest::binary()>> = rest
+    {new_width_height, rest} = ss_get_widths_heights(ss_header, rest, count + 1)
+    {width_height <> new_width_height, rest}
+  end
+
+  defp ss_get_widths_heights(_, rest, _), do: {<<>>, rest}
+
+  defp ss_get_pg_description(<<_n_s::3, _y::1, 1::1, _::3>>, rest) do
+    <<n_g_bin::binary-size(1), rest::binary()>> = rest
+    <<n_g>> = n_g_bin
+    {pg_descriptions, rest} =
+    1..n_g
+    |> Enum.reduce({<<>>, rest}, fn _i, {accumulated, rest} ->
+      {pg_description, rest} = ss_get_pg_descriptions(rest)
+      {accumulated <> pg_description, rest}
+    end)
+
+    {n_g_bin <> pg_descriptions, rest}
+  end
+
+  defp ss_get_pg_descriptions(<<first_octet::binary-size(1), rest::binary()>>) do
+    <<_tid::3, _u::1, r::3, _::2>> = first_octet
+
+    case r do
+      0 ->
+        {first_octet, rest}
+
+      _ ->
+        <<p_diffs::binary-size(r), rest::binary()>> = rest
+        {first_octet <> p_diffs, rest}
+    end
+  end
 end
