@@ -80,7 +80,8 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   end
 
   defmodule ScalabilityStructure do
-    alias Membrane.RTP.VP9.{PayloadDescriptor, SSDimension, PGDescription}
+    alias Membrane.RTP.VP9.PayloadDescriptor
+    alias Membrane.RTP.VP9.PayloadDescriptor.{SSDimension, PGDescription}
 
     @type t :: %__MODULE__{
             first_octet: PayloadDescriptor.first_octet(),
@@ -88,7 +89,8 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
             pg_descriptions: list(PGDescription.t())
           }
 
-    defstruct [:first_octet, :dimensions, :pg_descriptions]
+    @enforce_keys [:first_octet]
+    defstruct [:first_octet, dimensions: [], pg_descriptions: []]
   end
 
   @type t :: %__MODULE__{
@@ -100,10 +102,21 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
           d: d(),
           p_diffs: list(p_diff()),
           tl0picidx: tl0picidx(),
-          ss: ScalabilityStructure.t()
+          scalability_structure: ScalabilityStructure.t()
         }
 
-  defstruct [:first_octet, :picture_id, :tid, :u, :sid, :d, :tl0picidx, :ss, p_diffs: []]
+  defstruct [
+    :first_octet,
+    :picture_id,
+    :tid,
+    :u,
+    :sid,
+    :d,
+    :tl0picidx,
+    :scalability_structure,
+    p_diffs: []
+  ]
+
   # @spec parse_payload_descriptor(binary()) :: {:error, :malformed_data} | {:ok, {t(), binary()}}
   def parse_payload_descriptor(raw_payload)
 
@@ -115,14 +128,13 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
 
     {descriptor_acc, rest} = get_pdiffs(header, rest, 0, descriptor_acc)
 
-    {descriptor_acc, rest}
-    # {ss, rest} = get_scalability_structure(header, rest)
+    {ss, rest} = get_scalability_structure(header, rest)
 
-    # {header <> layer_indices <> p_diffs <> ss, rest}
+    {%{descriptor_acc | scalability_structure: ss}, rest}
   end
 
   # no picture id (PID)
-  defp get_pid(<<0::1, _::7>>, rest, _descriptor_acc), do: {<<>>, rest}
+  defp get_pid(<<0::1, _::7>>, rest, descriptor_acc), do: {descriptor_acc, rest}
 
   # picture id (PID) present
   defp get_pid(<<1::1, _::7>>, <<pid::binary-size(1), rest::binary()>>, descriptor_acc) do
@@ -188,7 +200,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
     {pg_descriptions, rest} = ss_get_pg_descriptions(ss_header, rest)
 
     {%ScalabilityStructure{
-       first_octet: ss_header,
+       first_octet: :binary.decode_unsigned(ss_header),
        dimensions: widths_and_heights,
        pg_descriptions: pg_descriptions
      }, rest}
@@ -200,14 +212,19 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
 
     {next_dims, rest} = ss_get_widths_heights(ss_header, rest, count + 1, dimensions)
 
-    {[%SSDimension{width: width, height: height} | next_dims], rest}
+    {[
+       %SSDimension{
+         width: :binary.decode_unsigned(width),
+         height: :binary.decode_unsigned(height)
+       }
+       | next_dims
+     ], rest}
   end
 
   defp ss_get_widths_heights(_, rest, _, dimensions), do: {dimensions, rest}
 
   defp ss_get_pg_descriptions(<<_n_s::3, _y::1, 1::1, _::3>>, rest) do
-    <<n_g_bin::binary-size(1), rest::binary()>> = rest
-    <<n_g>> = n_g_bin
+    <<n_g, rest::binary()>> = rest
 
     1..n_g
     |> Enum.reduce({[], rest}, fn _i, {accumulated, rest} ->
@@ -216,8 +233,10 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
     end)
   end
 
+  defp ss_get_pg_descriptions(_, rest), do: {[], rest}
+
   defp ss_get_pg_description(<<first_octet::binary-size(1), rest::binary()>>) do
-    <<tid::3, u::1, r::3, _::2>> = first_octet
+    <<tid::3, u::1, r::2, _::2>> = first_octet
 
     pg_description = %PGDescription{tid: tid, u: u}
 

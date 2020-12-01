@@ -1,6 +1,7 @@
 defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
   use ExUnit.Case
   alias Membrane.RTP.VP9.PayloadDescriptor
+  alias Membrane.RTP.VP9.PayloadDescriptor.{SSDimension, ScalabilityStructure}
 
   describe "VP9 Payload Descriptor parser" do
     @doc """
@@ -26,8 +27,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
         sid: 2
       }
 
-      assert {^expected_descriptor, _} =
-               PayloadDescriptor.parse_payload_descriptor(payload)
+      assert {^expected_descriptor, _} = PayloadDescriptor.parse_payload_descriptor(payload)
     end
 
     @doc """
@@ -86,7 +86,27 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
         sid: nil,
         p_diffs: [85, 170],
         tl0picidx: nil,
-        ss: nil
+        scalability_structure: nil
+      }
+
+      assert {^expected_descriptor, <<233, 29, 109, 237>>} =
+               PayloadDescriptor.parse_payload_descriptor(payload)
+    end
+
+    test "descriptor with only scalability structure" do
+      payload = <<10, 48, 85, 85, 85, 85, 85, 85, 85, 85, 233, 29, 109, 237>>
+
+      expected_ss = %ScalabilityStructure{
+        first_octet: 48,
+        dimensions: [
+          %SSDimension{width: 21845, height: 21845},
+          %SSDimension{width: 21845, height: 21845}
+        ]
+      }
+
+      expected_descriptor = %PayloadDescriptor{
+        first_octet: 10,
+        scalability_structure: expected_ss
       }
 
       assert {^expected_descriptor, <<233, 29, 109, 237>>} =
