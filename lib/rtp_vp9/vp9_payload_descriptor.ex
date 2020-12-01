@@ -41,30 +41,98 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   ```
   """
 
-  #   @spec parse_payload_descriptor(binary()) :: {:error, :malformed_data} | {:ok, {t(), binary()}}
+  @type first_octet :: 0..255
+
+  @type picture_id :: 0..32767
+
+  @type tid :: 0..7
+
+  @type u :: 0..1
+
+  @type d :: 0..1
+
+  @type sid :: 0..7
+
+  @type p_diff :: 0..255
+
+  @type tl0picidx :: 0..255
+
+  defmodule PGDescription do
+    alias Membrane.RTP.VP9.PayloadDescriptor
+
+    @type t :: %__MODULE__{
+            tid: PayloadDescriptor.tid(),
+            u: PayloadDescriptor.u(),
+            p_diffs: list(PayloadDescriptor.p_diff())
+          }
+
+    defstruct [:tid, :u, :p_diffs]
+  end
+
+  defmodule SSDimension do
+    @type t :: %__MODULE__{
+            width: 0..65535,
+            height: 0..65535
+          }
+
+    @enforce_keys [:width, :height]
+    defstruct @enforce_keys
+  end
+
+  defmodule ScalabilityStructure do
+    alias Membrane.RTP.VP9.{PayloadDescriptor, SSDimension, PGDescription}
+
+    @type t :: %__MODULE__{
+            first_octet: PayloadDescriptor.first_octet(),
+            dimensions: list(SSDimension.t()),
+            pg_descriptions: list(PGDescription.t())
+          }
+
+    defstruct [:first_octet, :dimensions, :pg_descriptions]
+  end
+
+  @type t :: %__MODULE__{
+          first_octet: first_octet(),
+          picture_id: picture_id(),
+          tid: tid(),
+          u: u(),
+          sid: sid(),
+          d: d(),
+          p_diffs: list(p_diff()),
+          tl0picidx: tl0picidx(),
+          ss: ScalabilityStructure.t()
+        }
+
+  defstruct [:first_octet, :picture_id, :tid, :u, :sid, :d, :tl0picidx, :ss, p_diffs: []]
+  # @spec parse_payload_descriptor(binary()) :: {:error, :malformed_data} | {:ok, {t(), binary()}}
   def parse_payload_descriptor(raw_payload)
 
   def parse_payload_descriptor(<<header::binary-size(1), rest::binary()>>) do
-    {pid, rest} = get_pid(header, rest)
-    {layer_indices, rest} = get_layer_indices(header, rest)
-    {p_diffs, rest} = get_pdiffs(header, rest, 0)
-    {ss, rest} = get_scalability_structure(header, rest)
+    {descriptor_acc, rest} =
+      get_pid(header, rest, %__MODULE__{first_octet: :binary.decode_unsigned(header)})
 
-    {header <> layer_indices <> p_diffs <> ss, rest}
+    {descriptor_acc, rest} = get_layer_indices(header, rest, descriptor_acc)
+
+    {descriptor_acc, rest} = get_pdiffs(header, rest, 0, descriptor_acc)
+
+    {descriptor_acc, rest}
+    # {ss, rest} = get_scalability_structure(header, rest)
+
+    # {header <> layer_indices <> p_diffs <> ss, rest}
   end
 
   # no picture id (PID)
-  defp get_pid(<<0::1, _::7>>, rest), do: {<<>>, rest}
+  defp get_pid(<<0::1, _::7>>, rest, _descriptor_acc), do: {<<>>, rest}
 
   # picture id (PID) present
-  defp get_pid(<<1::1, _::7>>, <<pid::binary-size(1), rest::binary>> = rest) do
+  defp get_pid(<<1::1, _::7>>, <<pid::binary-size(1), rest::binary()>>, descriptor_acc) do
     case pid do
       <<0::1, _rest_of_pid::7>> ->
-        {pid, rest}
+        {%{descriptor_acc | picture_id: :binary.decode_unsigned(pid)}, rest}
 
       <<1::1, _rest_of_pid::7>> ->
         <<second_byte::binary-size(1), rest::binary()>> = rest
-        {pid <> second_byte, rest}
+        {%{descriptor_acc | picture_id: :binary.decode_unsigned(pid <> second_byte)}, rest}
 
       _ ->
         :error
@@ -72,86 +140,98 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   end
 
   # no layer indices
-  defp get_layer_indices(<<_i::1, _p::1, 0::1, _::6>> = header, rest), do: {<<>>, rest}
+  defp get_layer_indices(<<_i::1, _p::1, 0::1, _::5>>, rest, descriptor_acc),
+    do: {descriptor_acc, rest}
 
   # layer indices present
-  defp get_layer_indices(<<_i::1, _p::1, 1::1, f::1, _::5>> = header, rest) do
+  defp get_layer_indices(<<_i::1, _p::1, 1::1, f::1, _::4>>, rest, descriptor_acc) do
     case f do
       # TL0PICIDX present
       0 ->
-        <<ids_and_tl0picidx::binary-size(2), rest::binary()>> = rest
-        {ids_and_tl0picidx, rest}
+        <<tid::3, u::1, sid::3, d::1, tl0picidx, rest::binary()>> = rest
+        {%{descriptor_acc | tid: tid, u: u, sid: sid, d: d, tl0picidx: tl0picidx}, rest}
 
       # no TL0PICIDX
       _ ->
-        <<ids::binary-size(1), rest::binary()>> = rest
-        {ids, rest}
+        <<tid::3, u::1, sid::3, d::1, rest::binary()>> = rest
+        {%{descriptor_acc | tid: tid, u: u, sid: sid, d: d}, rest}
     end
   end
 
   defp get_pdiffs(
          <<_i::1, 1::1, _l::1, 1::1, _::4>> = header,
-         <<p_diff::binary-size(1), rest::binary>> = rest,
-         diff_count
+         <<p_diff::binary-size(1), rest::binary>>,
+         diff_count,
+         descriptor_acc
        )
        when diff_count < 3 do
     <<_::7, n::1>> = p_diff
 
-    case n do
-      1 ->
-        {next_p_diff, rest} = get_pdiffs(header, rest, diff_count + 1)
-        {p_diff <> next_p_diff, rest}
+    {descriptor_acc, rest} =
+      if n == 1,
+        do: get_pdiffs(header, rest, diff_count + 1, descriptor_acc),
+        else: {descriptor_acc, rest}
 
-      _ ->
-        {p_diff, rest}
-    end
+    {%{descriptor_acc | p_diffs: [:binary.decode_unsigned(p_diff) | descriptor_acc.p_diffs]},
+     rest}
   end
 
-  defp get_pdiffs(_, rest, _), do: {<<>>, rest}
+  defp get_pdiffs(_, rest, _, descriptor_acc), do: {descriptor_acc, rest}
 
   # no scalability structure
-  defp get_scalability_structure(<<_iplfbe::6, 0::1, _z::1>>, rest), do: {<<>>, rest}
+  defp get_scalability_structure(<<_iplfbe::6, 0::1, _z::1>>, rest), do: {nil, rest}
 
   defp get_scalability_structure(<<_iplfbe::6, 1::1, _z::1>>, rest) do
     <<ss_header::binary-size(1), rest::binary()>> = rest
-    {widths_and_heights, rest} = ss_get_widths_heights(ss_header, rest, 0)
-    {pg_descriptions, rest} = ss_get_pg_description(ss_header, rest)
 
-    {ss_header <> widths_and_heights <> pg_descriptions, rest}
+    {widths_and_heights, rest} = ss_get_widths_heights(ss_header, rest, 0, [])
+    {pg_descriptions, rest} = ss_get_pg_descriptions(ss_header, rest)
+
+    {%ScalabilityStructure{
+       first_octet: ss_header,
+       dimensions: widths_and_heights,
+       pg_descriptions: pg_descriptions
+     }, rest}
   end
 
-  defp ss_get_widths_heights(<<n_s::3, 1::1, _g::1, _::3>> = ss_header, rest, count)
+  defp ss_get_widths_heights(<<n_s::3, 1::1, _g::1, _::3>> = ss_header, rest, count, dimensions)
        when count <= n_s do
-    <<width_height::binary-size(4), rest::binary()>> = rest
-    {new_width_height, rest} = ss_get_widths_heights(ss_header, rest, count + 1)
-    {width_height <> new_width_height, rest}
+    <<width::binary-size(2), height::binary-size(2), rest::binary()>> = rest
+
+    {next_dims, rest} = ss_get_widths_heights(ss_header, rest, count + 1, dimensions)
+
+    {[%SSDimension{width: width, height: height} | next_dims], rest}
   end
 
-  defp ss_get_widths_heights(_, rest, _), do: {<<>>, rest}
+  defp ss_get_widths_heights(_, rest, _, dimensions), do: {dimensions, rest}
 
-  defp ss_get_pg_description(<<_n_s::3, _y::1, 1::1, _::3>>, rest) do
+  defp ss_get_pg_descriptions(<<_n_s::3, _y::1, 1::1, _::3>>, rest) do
     <<n_g_bin::binary-size(1), rest::binary()>> = rest
     <<n_g>> = n_g_bin
-    {pg_descriptions, rest} =
-    1..n_g
-    |> Enum.reduce({<<>>, rest}, fn _i, {accumulated, rest} ->
-      {pg_description, rest} = ss_get_pg_descriptions(rest)
-      {accumulated <> pg_description, rest}
-    end)
 
-    {n_g_bin <> pg_descriptions, rest}
+    1..n_g
+    |> Enum.reduce({[], rest}, fn _i, {accumulated, rest} ->
+      {pg_description, rest} = ss_get_pg_description(rest)
+      {accumulated ++ [pg_description], rest}
+    end)
   end
 
-  defp ss_get_pg_descriptions(<<first_octet::binary-size(1), rest::binary()>>) do
-    <<_tid::3, _u::1, r::3, _::2>> = first_octet
+  defp ss_get_pg_description(<<first_octet::binary-size(1), rest::binary()>>) do
+    <<tid::3, u::1, r::3, _::2>> = first_octet
+
+    pg_description = %PGDescription{tid: tid, u: u}
 
     case r do
       0 ->
-        {first_octet, rest}
+        {pg_description, rest}
 
       _ ->
         <<p_diffs::binary-size(r), rest::binary()>> = rest
-        {first_octet <> p_diffs, rest}
+
+        {:binary.bin_to_list(p_diffs)
+         |> Enum.reduce(pg_description, fn p_diff, acc ->
+           %{acc | p_diffs: acc.p_diffs + [p_diff]}
+         end), rest}
     end
   end
 end
