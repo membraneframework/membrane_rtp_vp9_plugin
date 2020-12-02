@@ -66,7 +66,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
             p_diffs: list(PayloadDescriptor.p_diff())
           }
 
-    defstruct [:tid, :u, :p_diffs]
+    defstruct [:tid, :u, p_diffs: []]
   end
 
   defmodule SSDimension do
@@ -249,7 +249,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
 
         {:binary.bin_to_list(p_diffs)
          |> Enum.reduce(pg_description, fn p_diff, acc ->
-           %{acc | p_diffs: acc.p_diffs + [p_diff]}
+           %{acc | p_diffs: acc.p_diffs ++ [p_diff]}
          end), rest}
     end
   end
