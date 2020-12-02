@@ -122,25 +122,37 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
 
   def parse_payload_descriptor(<<header::binary-size(1), rest::binary()>>)
       when byte_size(rest) > 0 do
-    case get_pid(header, rest, %__MODULE__{first_octet: :binary.decode_unsigned(header)}) do
-      {:ok, {descriptor_acc, rest}} ->
-        {descriptor_acc, rest} = get_layer_indices(header, rest, descriptor_acc)
+    <<i::1, _p::1, _l::1, f::1, _bevz::4>> = header
 
-        {descriptor_acc, rest} = get_pdiffs(header, rest, 0, descriptor_acc)
+    if i != f do
+      {:error, :malformed_data}
+    else
+      case get_pid(header, rest, %__MODULE__{first_octet: :binary.decode_unsigned(header)}) do
+        {:ok, {descriptor_acc, rest}} ->
+          case get_layer_indices(header, rest, descriptor_acc) do
+            {:ok, {descriptor_acc, rest}} ->
+              {descriptor_acc, rest} = get_pdiffs(header, rest, 0, descriptor_acc)
 
-        {ss, rest} = get_scalability_structure(header, rest)
+              {ss, rest} = get_scalability_structure(header, rest)
 
-        {:ok, {%{descriptor_acc | scalability_structure: ss}, rest}}
+              {:ok, {%{descriptor_acc | scalability_structure: ss}, rest}}
 
-      _ ->
-        {:error, :malformed_data}
+            _ ->
+              {:error, :malformed_data}
+          end
+
+        _ ->
+          IO.inspect("error")
+          {:error, :malformed_data}
+      end
     end
   end
 
   def parse_payload_descriptor(_), do: {:error, :malformed_data}
 
   # no picture id (PID)
-  defp get_pid(<<0::1, _::7>>, rest, descriptor_acc), do: {:ok, {descriptor_acc, rest}}
+  defp get_pid(<<0::1, _::7>>, rest, descriptor_acc) when byte_size(rest) > 0,
+    do: {:ok, {descriptor_acc, rest}}
 
   # picture id (PID) present
   defp get_pid(<<1::1, _::7>>, <<pid::binary-size(1), rest::binary()>>, descriptor_acc)
@@ -161,23 +173,35 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   defp get_pid(_, _, _), do: {:error, :malformed_data}
 
   # no layer indices
-  defp get_layer_indices(<<_i::1, _p::1, 0::1, _::5>>, rest, descriptor_acc),
-    do: {descriptor_acc, rest}
+  defp get_layer_indices(<<_i::1, _p::1, 0::1, _::5>>, rest, descriptor_acc)
+       when byte_size(rest) > 0,
+       do: {:ok, {descriptor_acc, rest}}
 
   # layer indices present
-  defp get_layer_indices(<<_i::1, _p::1, 1::1, f::1, _::4>>, rest, descriptor_acc) do
+  defp get_layer_indices(<<_i::1, _p::1, 1::1, f::1, _::4>>, rest, descriptor_acc)
+       when byte_size(rest) > 0 do
     case f do
       # TL0PICIDX present
       0 ->
-        <<tid::3, u::1, sid::3, d::1, tl0picidx, rest::binary()>> = rest
-        {%{descriptor_acc | tid: tid, u: u, sid: sid, d: d, tl0picidx: tl0picidx}, rest}
+        if byte_size(rest) > 2 do
+          <<tid::3, u::1, sid::3, d::1, tl0picidx, rest::binary()>> = rest
+          {:ok, {%{descriptor_acc | tid: tid, u: u, sid: sid, d: d, tl0picidx: tl0picidx}, rest}}
+        else
+          {:error, :malformed_data}
+        end
 
       # no TL0PICIDX
       _ ->
-        <<tid::3, u::1, sid::3, d::1, rest::binary()>> = rest
-        {%{descriptor_acc | tid: tid, u: u, sid: sid, d: d}, rest}
+        if byte_size(rest) > 1 do
+          <<tid::3, u::1, sid::3, d::1, rest::binary()>> = rest
+          {:ok, {%{descriptor_acc | tid: tid, u: u, sid: sid, d: d}, rest}}
+        else
+          {:error, :malformed_data}
+        end
     end
   end
+
+  defp get_layer_indices(_, _, _), do: {:error, :malformed_data}
 
   defp get_pdiffs(
          <<_i::1, 1::1, _l::1, 1::1, _::4>> = header,

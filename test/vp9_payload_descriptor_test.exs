@@ -9,7 +9,6 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
     end
 
-
     test "malformed single byte picture id" do
       payload = <<128, 4::3>>
       assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
@@ -19,7 +18,6 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       payload = <<128, 128, 4::3>>
       assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
     end
-
 
     @doc """
          I P L F B E V Z
@@ -45,7 +43,9 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       }
 
       expected_rest = <<233, 29, 109, 237>>
-      assert {:ok, {actual_descriptor, rest}} = PayloadDescriptor.parse_payload_descriptor(payload)
+
+      assert {:ok, {actual_descriptor, rest}} =
+               PayloadDescriptor.parse_payload_descriptor(payload)
 
       assert ^expected_descriptor = actual_descriptor
       assert ^expected_rest = rest
@@ -54,7 +54,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
     @doc """
          I P L F B E V Z
         +-+-+-+-+-+-+-+-+
-        |1|0|1|0|1|0|0|0| (FIRST OCTET)
+        |1|0|1|0|1|0|0|0| (FIRST OCTET) Note: I != F
         +-+-+-+-+-+-+-+-+
     I:  |1|1 0 1 1 0 1 1| (EXTENDED PICTURE ID)
         |1 1 1 1 1 1 1 1|
@@ -65,17 +65,34 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
         +-+-+-+-+-+-+-+-+
     """
 
-    test "descriptor with extended picture id, layer indices and tl0picidx" do
+    test "descriptor with I not equal to F" do
       payload = <<168, 219, 255, 52, 85, 233, 29, 109, 237>>
 
+      assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
+    end
+
+    @doc """
+         I P L F B E V Z
+        +-+-+-+-+-+-+-+-+
+        |1|0|1|1|1|0|0|0| (FIRST OCTET)
+        +-+-+-+-+-+-+-+-+
+    I:  |1|1 0 1 1 0 1 1| (EXTENDED PICTURE ID)
+        |1 1 1 1 1 1 1 1|
+        +-+-+-+-+-+-+-+-+
+    L:  |0 0 1|1|0 1 0|0| (TID | U | SID | D)
+        +-+-+-+-+-+-+-+-+
+    """
+
+    test "descriptor with extended picture id, layer indices" do
+      payload = <<184, 219, 255, 52, 233, 29, 109, 237>>
+
       expected_descriptor = %PayloadDescriptor{
-        first_octet: 168,
+        first_octet: 184,
         picture_id: 56319,
         tid: 1,
         u: 1,
         d: 0,
-        sid: 2,
-        tl0picidx: 85
+        sid: 2
       }
 
       expected_rest = <<233, 29, 109, 237>>
@@ -114,7 +131,9 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       }
 
       expected_rest = <<233, 29, 109, 237>>
-      assert {:ok, {actual_descriptor, rest}} = PayloadDescriptor.parse_payload_descriptor(payload)
+
+      assert {:ok, {actual_descriptor, rest}} =
+               PayloadDescriptor.parse_payload_descriptor(payload)
 
       assert ^expected_descriptor = actual_descriptor
       assert ^expected_rest = rest
@@ -159,12 +178,13 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       }
 
       expected_rest = <<233, 29, 109, 237>>
-      assert {:ok, {actual_descriptor, rest}} = PayloadDescriptor.parse_payload_descriptor(payload)
+
+      assert {:ok, {actual_descriptor, rest}} =
+               PayloadDescriptor.parse_payload_descriptor(payload)
 
       assert ^expected_descriptor = actual_descriptor
       assert ^expected_rest = rest
     end
-
 
     @doc """
          I P L F B E V Z
@@ -205,12 +225,14 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       }
 
       expected_rest = <<233, 29, 109, 237>>
+
       expected_descriptor = %PayloadDescriptor{
         first_octet: 2,
         scalability_structure: expected_ss
       }
 
-      assert {:ok, {actual_descriptor, rest}} = PayloadDescriptor.parse_payload_descriptor(payload)
+      assert {:ok, {actual_descriptor, rest}} =
+               PayloadDescriptor.parse_payload_descriptor(payload)
 
       assert ^expected_descriptor = actual_descriptor
       assert ^expected_rest = rest
