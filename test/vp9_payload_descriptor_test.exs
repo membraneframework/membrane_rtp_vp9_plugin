@@ -4,6 +4,23 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
   alias Membrane.RTP.VP9.PayloadDescriptor.{SSDimension, ScalabilityStructure, PGDescription}
 
   describe "VP9 Payload Descriptor parser" do
+    test "payload too short" do
+      payload = <<184>>
+      assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
+    end
+
+
+    test "malformed single byte picture id" do
+      payload = <<128, 4::3>>
+      assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
+    end
+
+    test "malformed double byte picture id" do
+      payload = <<128, 128, 4::3>>
+      assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
+    end
+
+
     @doc """
          I P L F B E V Z
         +-+-+-+-+-+-+-+-+
@@ -27,7 +44,11 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
         sid: 2
       }
 
-      assert {^expected_descriptor, _} = PayloadDescriptor.parse_payload_descriptor(payload)
+      expected_rest = <<233, 29, 109, 237>>
+      assert {:ok, {actual_descriptor, rest}} = PayloadDescriptor.parse_payload_descriptor(payload)
+
+      assert ^expected_descriptor = actual_descriptor
+      assert ^expected_rest = rest
     end
 
     @doc """
@@ -57,8 +78,11 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
         tl0picidx: 85
       }
 
-      assert {^expected_descriptor, <<233, 29, 109, 237>>} =
-               PayloadDescriptor.parse_payload_descriptor(payload)
+      expected_rest = <<233, 29, 109, 237>>
+      assert {:ok, {actual_descriptor, rest}} = PayloadDescriptor.parse_payload_descriptor(payload)
+
+      assert ^expected_descriptor = actual_descriptor
+      assert ^expected_rest = rest
     end
 
     @doc """
@@ -89,8 +113,11 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
         scalability_structure: nil
       }
 
-      assert {^expected_descriptor, <<233, 29, 109, 237>>} =
-               PayloadDescriptor.parse_payload_descriptor(payload)
+      expected_rest = <<233, 29, 109, 237>>
+      assert {:ok, {actual_descriptor, rest}} = PayloadDescriptor.parse_payload_descriptor(payload)
+
+      assert ^expected_descriptor = actual_descriptor
+      assert ^expected_rest = rest
     end
 
     @doc """
@@ -131,8 +158,11 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
         scalability_structure: expected_ss
       }
 
-      assert {^expected_descriptor, <<233, 29, 109, 237>>} =
-               PayloadDescriptor.parse_payload_descriptor(payload)
+      expected_rest = <<233, 29, 109, 237>>
+      assert {:ok, {actual_descriptor, rest}} = PayloadDescriptor.parse_payload_descriptor(payload)
+
+      assert ^expected_descriptor = actual_descriptor
+      assert ^expected_rest = rest
     end
 
 
@@ -174,13 +204,16 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
         ]
       }
 
+      expected_rest = <<233, 29, 109, 237>>
       expected_descriptor = %PayloadDescriptor{
         first_octet: 2,
         scalability_structure: expected_ss
       }
 
-      assert {^expected_descriptor, <<233, 29, 109, 237>>} =
-        PayloadDescriptor.parse_payload_descriptor(payload)
+      assert {:ok, {actual_descriptor, rest}} = PayloadDescriptor.parse_payload_descriptor(payload)
+
+      assert ^expected_descriptor = actual_descriptor
+      assert ^expected_rest = rest
     end
   end
 end

@@ -117,39 +117,48 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
     p_diffs: []
   ]
 
-  # @spec parse_payload_descriptor(binary()) :: {:error, :malformed_data} | {:ok, {t(), binary()}}
+  @spec parse_payload_descriptor(binary()) :: {:error, :malformed_data} | {:ok, {t(), binary()}}
   def parse_payload_descriptor(raw_payload)
 
-  def parse_payload_descriptor(<<header::binary-size(1), rest::binary()>>) do
-    {descriptor_acc, rest} =
-      get_pid(header, rest, %__MODULE__{first_octet: :binary.decode_unsigned(header)})
+  def parse_payload_descriptor(<<header::binary-size(1), rest::binary()>>)
+      when byte_size(rest) > 0 do
+    case get_pid(header, rest, %__MODULE__{first_octet: :binary.decode_unsigned(header)}) do
+      {:ok, {descriptor_acc, rest}} ->
+        {descriptor_acc, rest} = get_layer_indices(header, rest, descriptor_acc)
 
-    {descriptor_acc, rest} = get_layer_indices(header, rest, descriptor_acc)
+        {descriptor_acc, rest} = get_pdiffs(header, rest, 0, descriptor_acc)
 
-    {descriptor_acc, rest} = get_pdiffs(header, rest, 0, descriptor_acc)
+        {ss, rest} = get_scalability_structure(header, rest)
 
-    {ss, rest} = get_scalability_structure(header, rest)
+        {:ok, {%{descriptor_acc | scalability_structure: ss}, rest}}
 
-    {%{descriptor_acc | scalability_structure: ss}, rest}
+      _ ->
+        {:error, :malformed_data}
+    end
   end
 
+  def parse_payload_descriptor(_), do: {:error, :malformed_data}
+
   # no picture id (PID)
-  defp get_pid(<<0::1, _::7>>, rest, descriptor_acc), do: {descriptor_acc, rest}
+  defp get_pid(<<0::1, _::7>>, rest, descriptor_acc), do: {:ok, {descriptor_acc, rest}}
 
   # picture id (PID) present
-  defp get_pid(<<1::1, _::7>>, <<pid::binary-size(1), rest::binary()>>, descriptor_acc) do
+  defp get_pid(<<1::1, _::7>>, <<pid::binary-size(1), rest::binary()>>, descriptor_acc)
+       when byte_size(rest) > 0 do
     case pid do
       <<0::1, _rest_of_pid::7>> ->
-        {%{descriptor_acc | picture_id: :binary.decode_unsigned(pid)}, rest}
+        {:ok, {%{descriptor_acc | picture_id: :binary.decode_unsigned(pid)}, rest}}
 
       <<1::1, _rest_of_pid::7>> ->
         <<second_byte::binary-size(1), rest::binary()>> = rest
-        {%{descriptor_acc | picture_id: :binary.decode_unsigned(pid <> second_byte)}, rest}
+        {:ok, {%{descriptor_acc | picture_id: :binary.decode_unsigned(pid <> second_byte)}, rest}}
 
       _ ->
-        :error
+        {:error, :malformed_data}
     end
   end
+
+  defp get_pid(_, _, _), do: {:error, :malformed_data}
 
   # no layer indices
   defp get_layer_indices(<<_i::1, _p::1, 0::1, _::5>>, rest, descriptor_acc),
