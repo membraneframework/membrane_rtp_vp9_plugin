@@ -19,6 +19,24 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
     end
 
+
+    @doc """
+         I P L F B E V Z
+        +-+-+-+-+-+-+-+-+
+        |1|1|0|1|1|0|0|0| (FIRST OCTET)
+        +-+-+-+-+-+-+-+-+
+        |0|1 0 1 0 1 0 1| (PICTURE ID)
+        +-+-+-+-+-+-+-+-+
+        |0 1 0 1 0 1 0 1| (P_DIFF 1)
+        +-+-+-+-+-+-+-+-+
+        |1 0 1 0 1|        (P_DIFF 2)
+        +-+-+-+-+-+
+    """
+    test "malformed pdiffs" do
+      payload = <<216, 85, 85, 21::5>>
+      assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
+    end
+
     @doc """
          I P L F B E V Z
         +-+-+-+-+-+-+-+-+

@@ -131,11 +131,15 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
         {:ok, {descriptor_acc, rest}} ->
           case get_layer_indices(header, rest, descriptor_acc) do
             {:ok, {descriptor_acc, rest}} ->
-              {descriptor_acc, rest} = get_pdiffs(header, rest, 0, descriptor_acc)
+              case get_pdiffs(header, rest, 0, descriptor_acc) do
+                {:ok, {descriptor_acc, rest}} ->
+                  {ss, rest} = get_scalability_structure(header, rest)
 
-              {ss, rest} = get_scalability_structure(header, rest)
+                  {:ok, {%{descriptor_acc | scalability_structure: ss}, rest}}
 
-              {:ok, {%{descriptor_acc | scalability_structure: ss}, rest}}
+                _ ->
+                  {:error, :malformed_data}
+              end
 
             _ ->
               {:error, :malformed_data}
@@ -212,16 +216,26 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
        when diff_count < 3 do
     <<_::7, n::1>> = p_diff
 
-    {descriptor_acc, rest} =
-      if n == 1,
-        do: get_pdiffs(header, rest, diff_count + 1, descriptor_acc),
-        else: {descriptor_acc, rest}
-
-    {%{descriptor_acc | p_diffs: [:binary.decode_unsigned(p_diff) | descriptor_acc.p_diffs]},
-     rest}
+    if n == 1 do
+      case get_pdiffs(header, rest, diff_count + 1, descriptor_acc) do
+        {:ok, {descriptor_acc, rest}} ->
+          {:ok,
+           {%{
+              descriptor_acc
+              | p_diffs: [:binary.decode_unsigned(p_diff) | descriptor_acc.p_diffs]
+            }, rest}}
+        _ -> {:error, :malformed_data}
+      end
+    else
+      {:ok,
+       {%{descriptor_acc | p_diffs: [:binary.decode_unsigned(p_diff) | descriptor_acc.p_diffs]},
+        rest}}
+    end
   end
 
-  defp get_pdiffs(_, rest, _, descriptor_acc), do: {descriptor_acc, rest}
+  defp get_pdiffs(_, rest, _, descriptor_acc) when byte_size(rest) > 0, do: {:ok, {descriptor_acc, rest}}
+
+  defp get_pdiffs(_,_,_,_), do: {:error, :malformed_data}
 
   # no scalability structure
   defp get_scalability_structure(<<_iplfbe::6, 0::1, _z::1>>, rest), do: {nil, rest}
