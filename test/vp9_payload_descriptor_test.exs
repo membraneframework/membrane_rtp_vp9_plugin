@@ -19,7 +19,6 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
     end
 
-
     @doc """
          I P L F B E V Z
         +-+-+-+-+-+-+-+-+
@@ -34,6 +33,29 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
     """
     test "malformed pdiffs" do
       payload = <<216, 85, 85, 21::5>>
+      assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
+    end
+
+    @doc """
+         I P L F B E V Z
+        +-+-+-+-+-+-+-+-+
+        |0|0|0|0|0|0|1|0| (FIRST OCTET)
+        +-+-+-+-+-+-+-+-+
+        |0|0|0|0|1|0|0|0| (FIRST OCTET OF SS)
+        +-+-+-+-+-+-+-+-+
+        |0 0 0 0 0 0 1 0| (N_G)
+        +-+-+-+-+-+-+-+-+
+        |0 0 0|0|1 0|0 0| (TID | U | R | _ _ )
+        +-+-+-+-+-+-+-+-+
+        |1 0 1 0 1 0 1 0| (P_DIFF 1) Note that R=2 but there is only one P_DIFF
+        +-+-+-+-+-+-+-+-+
+        |0 0 1|1|0 1|0 0| (TID | U | R | _ _ )
+        +-+-+-+-+-+-+-+-+
+        |0 1 0 1 0 1 0 1| (P_DIFF 1)
+        +-+-+-+-+-+-+-+-+
+    """
+    test "malformed pg descriptions SS too short" do
+      payload = <<2, 8, 2, 8, 170, 52>>
       assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
     end
 
@@ -114,7 +136,9 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       }
 
       expected_rest = <<233, 29, 109, 237>>
-      assert {:ok, {actual_descriptor, rest}} = PayloadDescriptor.parse_payload_descriptor(payload)
+
+      assert {:ok, {actual_descriptor, rest}} =
+               PayloadDescriptor.parse_payload_descriptor(payload)
 
       assert ^expected_descriptor = actual_descriptor
       assert ^expected_rest = rest

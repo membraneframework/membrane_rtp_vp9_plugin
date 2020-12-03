@@ -133,9 +133,13 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
             {:ok, {descriptor_acc, rest}} ->
               case get_pdiffs(header, rest, 0, descriptor_acc) do
                 {:ok, {descriptor_acc, rest}} ->
-                  {ss, rest} = get_scalability_structure(header, rest)
+                  case get_scalability_structure(header, rest) do
+                    {:ok, {ss, rest}} ->
+                      {:ok, {%{descriptor_acc | scalability_structure: ss}, rest}}
 
-                  {:ok, {%{descriptor_acc | scalability_structure: ss}, rest}}
+                    _ ->
+                      {:error, :malformed_data}
+                  end
 
                 _ ->
                   {:error, :malformed_data}
@@ -146,7 +150,6 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
           end
 
         _ ->
-          IO.inspect("error")
           {:error, :malformed_data}
       end
     end
@@ -224,7 +227,9 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
               descriptor_acc
               | p_diffs: [:binary.decode_unsigned(p_diff) | descriptor_acc.p_diffs]
             }, rest}}
-        _ -> {:error, :malformed_data}
+
+        _ ->
+          {:error, :malformed_data}
       end
     else
       {:ok,
@@ -233,58 +238,94 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
     end
   end
 
-  defp get_pdiffs(_, rest, _, descriptor_acc) when byte_size(rest) > 0, do: {:ok, {descriptor_acc, rest}}
+  defp get_pdiffs(_, rest, _, descriptor_acc) when byte_size(rest) > 0,
+    do: {:ok, {descriptor_acc, rest}}
 
-  defp get_pdiffs(_,_,_,_), do: {:error, :malformed_data}
+  defp get_pdiffs(_, _, _, _), do: {:error, :malformed_data}
 
   # no scalability structure
-  defp get_scalability_structure(<<_iplfbe::6, 0::1, _z::1>>, rest), do: {nil, rest}
+  defp get_scalability_structure(<<_iplfbe::6, 0::1, _z::1>>, rest), do: {:ok, {nil, rest}}
 
   defp get_scalability_structure(<<_iplfbe::6, 1::1, _z::1>>, rest) do
     <<ss_header::binary-size(1), rest::binary()>> = rest
 
-    {widths_and_heights, rest} = ss_get_widths_heights(ss_header, rest, 0, [])
-    {pg_descriptions, rest} = ss_get_pg_descriptions(ss_header, rest)
+    case ss_get_widths_heights(ss_header, rest, 0, []) do
+      {:ok, {widths_and_heights, rest}} ->
+        case ss_get_pg_descriptions(ss_header, rest) do
+          {:ok, {pg_descriptions, rest}} ->
+            {:ok,
+             {%ScalabilityStructure{
+                first_octet: :binary.decode_unsigned(ss_header),
+                dimensions: widths_and_heights,
+                pg_descriptions: pg_descriptions
+              }, rest}}
 
-    {%ScalabilityStructure{
-       first_octet: :binary.decode_unsigned(ss_header),
-       dimensions: widths_and_heights,
-       pg_descriptions: pg_descriptions
-     }, rest}
+          _ ->
+            {:error, :malformed_data}
+        end
+
+      _ ->
+        {:error, :malformed_data}
+    end
   end
+
+  defp ss_get_widths_heights(<<_n_s::3, 0::1, _g::1, _::3>>, rest, _count, dimensions),
+    do: {:ok, {dimensions, rest}}
 
   defp ss_get_widths_heights(<<n_s::3, 1::1, _g::1, _::3>> = ss_header, rest, count, dimensions)
-       when count <= n_s do
+       when count <= n_s and byte_size(rest) > 4 do
     <<width::binary-size(2), height::binary-size(2), rest::binary()>> = rest
 
-    {next_dims, rest} = ss_get_widths_heights(ss_header, rest, count + 1, dimensions)
+    case ss_get_widths_heights(ss_header, rest, count + 1, dimensions) do
+      {:ok, {next_dims, rest}} ->
+        {:ok,
+         {[
+            %SSDimension{
+              width: :binary.decode_unsigned(width),
+              height: :binary.decode_unsigned(height)
+            }
+            | next_dims
+          ], rest}}
 
-    {[
-       %SSDimension{
-         width: :binary.decode_unsigned(width),
-         height: :binary.decode_unsigned(height)
-       }
-       | next_dims
-     ], rest}
+      _ ->
+        {:error, :malformed_data}
+    end
   end
 
-  defp ss_get_widths_heights(_, rest, _, dimensions), do: {dimensions, rest}
+  defp ss_get_widths_heights(<<n_s::3, 1::1, _g::1, _::3>>, rest, count, dimensions)
+       when count == n_s + 1,
+       do: {:ok, {dimensions, rest}}
+
+  defp ss_get_widths_heights(_, _, _, _), do: {:error, :malformed_data}
 
   defp ss_get_pg_descriptions(<<_n_s::3, _y::1, 1::1, _::3>>, rest) do
     <<n_g, rest::binary()>> = rest
 
     1..n_g
-    |> Enum.reduce({[], rest}, fn _i, {accumulated, rest} ->
-      {pg_description, rest} = ss_get_pg_description(rest)
-      {accumulated ++ [pg_description], rest}
+    |> Enum.reduce({:ok, {[], rest}}, fn _i, acc ->
+      case acc do
+        {:ok, {accumulated, rest}} ->
+          case ss_get_pg_description(rest) do
+            {:ok, {pg_description, rest}} ->
+              {:ok, {accumulated ++ [pg_description], rest}}
+
+            _ ->
+              {:error, :malformed_data}
+          end
+
+        _ ->
+          {:error, :malformed_data}
+      end
     end)
   end
 
-  defp ss_get_pg_descriptions(_, rest), do: {[], rest}
+  defp ss_get_pg_descriptions(_, rest), do: {:ok, {[], rest}}
 
-  defp ss_get_pg_description(<<first_octet::binary-size(1), rest::binary()>>) do
-    <<tid::3, u::1, r::2, _::2>> = first_octet
+  defp ss_get_pg_description(<<_tid::3, _u::1, r::2, _::2, rest::binary()>>)
+       when byte_size(rest) < r,
+       do: {:error, :malformed_data}
 
+  defp ss_get_pg_description(<<tid::3, u::1, r::2, _::2, rest::binary()>>) do
     pg_description = %PGDescription{tid: tid, u: u}
 
     case r do
@@ -294,10 +335,13 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
       _ ->
         <<p_diffs::binary-size(r), rest::binary()>> = rest
 
-        {:binary.bin_to_list(p_diffs)
-         |> Enum.reduce(pg_description, fn p_diff, acc ->
-           %{acc | p_diffs: acc.p_diffs ++ [p_diff]}
-         end), rest}
+        {:ok,
+         {:binary.bin_to_list(p_diffs)
+          |> Enum.reduce(pg_description, fn p_diff, acc ->
+            %{acc | p_diffs: acc.p_diffs ++ [p_diff]}
+          end), rest}}
     end
   end
+
+  defp ss_get_pg_description(_), do: {:error, :malformed_data}
 end
