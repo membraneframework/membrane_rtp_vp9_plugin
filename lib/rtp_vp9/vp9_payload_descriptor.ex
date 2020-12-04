@@ -63,7 +63,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
     @type t :: %__MODULE__{
             tid: PayloadDescriptor.tid(),
             u: PayloadDescriptor.u(),
-            p_diffs: list(PayloadDescriptor.p_diff())
+            p_diffs: [PayloadDescriptor.p_diff()]
           }
 
     defstruct [:tid, :u, p_diffs: []]
@@ -85,8 +85,8 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
 
     @type t :: %__MODULE__{
             first_octet: PayloadDescriptor.first_octet(),
-            dimensions: list(SSDimension.t()),
-            pg_descriptions: list(PGDescription.t())
+            dimensions: [SSDimension.t()],
+            pg_descriptions: [PGDescription.t()]
           }
 
     @enforce_keys [:first_octet]
@@ -100,7 +100,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
           u: u(),
           sid: sid(),
           d: d(),
-          p_diffs: list(p_diff()),
+          p_diffs: [p_diff()],
           tl0picidx: tl0picidx(),
           scalability_structure: ScalabilityStructure.t()
         }
@@ -127,30 +127,15 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
     if i != f do
       {:error, :malformed_data}
     else
-      case get_pid(header, rest, %__MODULE__{first_octet: :binary.decode_unsigned(header)}) do
-        {:ok, {descriptor_acc, rest}} ->
-          case get_layer_indices(header, rest, descriptor_acc) do
-            {:ok, {descriptor_acc, rest}} ->
-              case get_pdiffs(header, rest, 0, descriptor_acc) do
-                {:ok, {descriptor_acc, rest}} ->
-                  case get_scalability_structure(header, rest) do
-                    {:ok, {ss, rest}} ->
-                      {:ok, {%{descriptor_acc | scalability_structure: ss}, rest}}
-
-                    _ ->
-                      {:error, :malformed_data}
-                  end
-
-                _ ->
-                  {:error, :malformed_data}
-              end
-
-            _ ->
-              {:error, :malformed_data}
-          end
-
-        _ ->
-          {:error, :malformed_data}
+      with <<decoded_header>> <- header,
+           {:ok, {descriptor_acc, rest}} <-
+             get_pid(header, rest, %__MODULE__{first_octet: decoded_header}),
+           {:ok, {descriptor_acc, rest}} <- get_layer_indices(header, rest, descriptor_acc),
+           {:ok, {descriptor_acc, rest}} <- get_pdiffs(header, rest, 0, descriptor_acc),
+           {:ok, {ss, rest}} <- get_scalability_structure(header, rest) do
+        {:ok, {%{descriptor_acc | scalability_structure: ss}, rest}}
+      else
+        _ -> {:error, :malformed_data}
       end
     end
   end
@@ -162,53 +147,44 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
     do: {:ok, {descriptor_acc, rest}}
 
   # picture id (PID) present
-  defp get_pid(<<1::1, _::7>>, <<pid::binary-size(1), rest::binary()>>, descriptor_acc)
+  defp get_pid(<<1::1, _::7>>, <<pid, rest::binary()>>, descriptor_acc)
        when byte_size(rest) > 0 do
-    case pid do
+    case <<pid>> do
       <<0::1, _rest_of_pid::7>> ->
-        {:ok, {%{descriptor_acc | picture_id: :binary.decode_unsigned(pid)}, rest}}
+        {:ok, {%{descriptor_acc | picture_id: pid}, rest}}
 
       <<1::1, _rest_of_pid::7>> ->
-        <<second_byte::binary-size(1), rest::binary()>> = rest
-        {:ok, {%{descriptor_acc | picture_id: :binary.decode_unsigned(pid <> second_byte)}, rest}}
+        <<second_byte, rest::binary()>> = rest
+        <<pid::16>> = <<pid, second_byte>>
+        {:ok, {%{descriptor_acc | picture_id: pid}, rest}}
 
       _ ->
         {:error, :malformed_data}
     end
   end
 
-  defp get_pid(_, _, _), do: {:error, :malformed_data}
+  defp get_pid(_header, _rest, _descriptor_acc), do: {:error, :malformed_data}
 
   # no layer indices
   defp get_layer_indices(<<_i::1, _p::1, 0::1, _::5>>, rest, descriptor_acc)
        when byte_size(rest) > 0,
        do: {:ok, {descriptor_acc, rest}}
 
-  # layer indices present
-  defp get_layer_indices(<<_i::1, _p::1, 1::1, f::1, _::4>>, rest, descriptor_acc)
-       when byte_size(rest) > 0 do
-    case f do
-      # TL0PICIDX present
-      0 ->
-        if byte_size(rest) > 2 do
-          <<tid::3, u::1, sid::3, d::1, tl0picidx, rest::binary()>> = rest
-          {:ok, {%{descriptor_acc | tid: tid, u: u, sid: sid, d: d, tl0picidx: tl0picidx}, rest}}
-        else
-          {:error, :malformed_data}
-        end
-
-      # no TL0PICIDX
-      _ ->
-        if byte_size(rest) > 1 do
-          <<tid::3, u::1, sid::3, d::1, rest::binary()>> = rest
-          {:ok, {%{descriptor_acc | tid: tid, u: u, sid: sid, d: d}, rest}}
-        else
-          {:error, :malformed_data}
-        end
-    end
+  # layer indices and TL0PICIDX present
+  defp get_layer_indices(<<_i::1, _p::1, 1::1, 0::1, _::4>>, rest, descriptor_acc)
+       when byte_size(rest) > 2 do
+    <<tid::3, u::1, sid::3, d::1, tl0picidx, rest::binary()>> = rest
+    {:ok, {%{descriptor_acc | tid: tid, u: u, sid: sid, d: d, tl0picidx: tl0picidx}, rest}}
   end
 
-  defp get_layer_indices(_, _, _), do: {:error, :malformed_data}
+  # layer indices present, no TL0PICIDX
+  defp get_layer_indices(<<_i::1, _p::1, 1::1, 1::1, _::4>>, rest, descriptor_acc)
+       when byte_size(rest) > 1 do
+    <<tid::3, u::1, sid::3, d::1, rest::binary()>> = rest
+    {:ok, {%{descriptor_acc | tid: tid, u: u, sid: sid, d: d}, rest}}
+  end
+
+  defp get_layer_indices(_header, _rest, _descriptor_acc), do: {:error, :malformed_data}
 
   defp get_pdiffs(
          <<_i::1, 1::1, _l::1, 1::1, _::4>> = header,
@@ -219,29 +195,29 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
        when diff_count < 3 do
     <<_::7, n::1>> = p_diff
 
-    if n == 1 do
-      case get_pdiffs(header, rest, diff_count + 1, descriptor_acc) do
-        {:ok, {descriptor_acc, rest}} ->
-          {:ok,
-           {%{
-              descriptor_acc
-              | p_diffs: [:binary.decode_unsigned(p_diff) | descriptor_acc.p_diffs]
-            }, rest}}
-
-        _ ->
-          {:error, :malformed_data}
-      end
-    else
+    with 1 <- n,
+         {:ok, {descriptor_acc, rest}} <-
+           get_pdiffs(header, rest, diff_count + 1, descriptor_acc) do
       {:ok,
-       {%{descriptor_acc | p_diffs: [:binary.decode_unsigned(p_diff) | descriptor_acc.p_diffs]},
-        rest}}
+       {%{
+          descriptor_acc
+          | p_diffs: [:binary.decode_unsigned(p_diff) | descriptor_acc.p_diffs]
+        }, rest}}
+    else
+      0 ->
+        {:ok,
+         {%{descriptor_acc | p_diffs: [:binary.decode_unsigned(p_diff) | descriptor_acc.p_diffs]},
+          rest}}
+
+      {:error, :malformed_data} ->
+        {:error, :malformed_data}
     end
   end
 
-  defp get_pdiffs(_, rest, _, descriptor_acc) when byte_size(rest) > 0,
+  defp get_pdiffs(_header, rest, _diff_count, descriptor_acc) when byte_size(rest) > 0,
     do: {:ok, {descriptor_acc, rest}}
 
-  defp get_pdiffs(_, _, _, _), do: {:error, :malformed_data}
+  defp get_pdiffs(_header, _rest, _diff_count, _descriptor_acc), do: {:error, :malformed_data}
 
   # no scalability structure
   defp get_scalability_structure(<<_iplfbe::6, 0::1, _z::1>>, rest), do: {:ok, {nil, rest}}
@@ -249,34 +225,32 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   defp get_scalability_structure(<<_iplfbe::6, 1::1, _z::1>>, rest) do
     <<ss_header::binary-size(1), rest::binary()>> = rest
 
-    case ss_get_widths_heights(ss_header, rest, 0, []) do
-      {:ok, {widths_and_heights, rest}} ->
-        case ss_get_pg_descriptions(ss_header, rest) do
-          {:ok, {pg_descriptions, rest}} ->
-            {:ok,
-             {%ScalabilityStructure{
-                first_octet: :binary.decode_unsigned(ss_header),
-                dimensions: widths_and_heights,
-                pg_descriptions: pg_descriptions
-              }, rest}}
-
-          _ ->
-            {:error, :malformed_data}
-        end
-
-      _ ->
-        {:error, :malformed_data}
+    with {:ok, {widths_and_heights, rest}} <- ss_get_widths_and_heights(ss_header, rest, 0, []),
+         {:ok, {pg_descriptions, rest}} <- ss_get_pg_descriptions(ss_header, rest) do
+      {:ok,
+       {%ScalabilityStructure{
+          first_octet: :binary.decode_unsigned(ss_header),
+          dimensions: widths_and_heights,
+          pg_descriptions: pg_descriptions
+        }, rest}}
+    else
+      _ -> {:error, :malformed_data}
     end
   end
 
-  defp ss_get_widths_heights(<<_n_s::3, 0::1, _g::1, _::3>>, rest, _count, dimensions),
+  defp ss_get_widths_and_heights(<<_n_s::3, 0::1, _g::1, _::3>>, rest, _count, dimensions),
     do: {:ok, {dimensions, rest}}
 
-  defp ss_get_widths_heights(<<n_s::3, 1::1, _g::1, _::3>> = ss_header, rest, count, dimensions)
+  defp ss_get_widths_and_heights(
+         <<n_s::3, 1::1, _g::1, _::3>> = ss_header,
+         rest,
+         count,
+         dimensions
+       )
        when count <= n_s and byte_size(rest) > 4 do
     <<width::binary-size(2), height::binary-size(2), rest::binary()>> = rest
 
-    case ss_get_widths_heights(ss_header, rest, count + 1, dimensions) do
+    case ss_get_widths_and_heights(ss_header, rest, count + 1, dimensions) do
       {:ok, {next_dims, rest}} ->
         {:ok,
          {[
@@ -292,54 +266,52 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
     end
   end
 
-  defp ss_get_widths_heights(<<n_s::3, 1::1, _g::1, _::3>>, rest, count, dimensions)
+  defp ss_get_widths_and_heights(<<n_s::3, 1::1, _g::1, _::3>>, rest, count, dimensions)
        when count == n_s + 1,
        do: {:ok, {dimensions, rest}}
 
-  defp ss_get_widths_heights(_, _, _, _), do: {:error, :malformed_data}
+  defp ss_get_widths_and_heights(_ss_header, _rest, _count, _dimensions),
+    do: {:error, :malformed_data}
 
   defp ss_get_pg_descriptions(<<_n_s::3, _y::1, 1::1, _::3>>, rest) do
     <<n_g, rest::binary()>> = rest
 
-    1..n_g
-    |> Enum.reduce({:ok, {[], rest}}, fn _i, acc ->
-      case acc do
-        {:ok, {accumulated, rest}} ->
-          case ss_get_pg_description(rest) do
-            {:ok, {pg_description, rest}} ->
-              {:ok, {accumulated ++ [pg_description], rest}}
-
-            _ ->
-              {:error, :malformed_data}
-          end
-
-        _ ->
-          {:error, :malformed_data}
-      end
-    end)
+    with {descriptions, {:ok, rest}} <-
+           1..n_g
+           |> Enum.map_reduce({:ok, rest}, fn _i, acc ->
+             with {:ok, rest} <- acc,
+                  {:ok, {pg_description, rest}} <- ss_get_pg_description(rest) do
+               {pg_description, {:ok, rest}}
+             else
+               _ -> {nil, {:error, :malformed_data}}
+             end
+           end) do
+      {:ok, {descriptions, rest}}
+    else
+      _ -> {:error, :malformed_data}
+    end
   end
 
-  defp ss_get_pg_descriptions(_, rest), do: {:ok, {[], rest}}
+  defp ss_get_pg_descriptions(_ss_header, rest), do: {:ok, {[], rest}}
 
   defp ss_get_pg_description(<<_tid::3, _u::1, r::2, _::2, rest::binary()>>)
        when byte_size(rest) < r,
        do: {:error, :malformed_data}
 
-  defp ss_get_pg_description(<<tid::3, u::1, r::2, _::2, rest::binary()>>) do
+  defp ss_get_pg_description(<<tid::3, u::1, 0::2, _::2, rest::binary()>>),
+    do: {%PGDescription{tid: tid, u: u}, rest}
+
+  defp ss_get_pg_description(<<tid::3, u::1, r::2, _::2, rest::binary()>>)
+       when byte_size(rest) > r do
     pg_description = %PGDescription{tid: tid, u: u}
 
-    case r do
-      0 ->
-        {pg_description, rest}
-
-      _ ->
-        <<p_diffs::binary-size(r), rest::binary()>> = rest
-
-        {:ok,
-         {:binary.bin_to_list(p_diffs)
-          |> Enum.reduce(pg_description, fn p_diff, acc ->
-            %{acc | p_diffs: acc.p_diffs ++ [p_diff]}
-          end), rest}}
+    with {p_diffs, rest} <-
+           1..r
+           |> Enum.map_reduce(rest, fn _i, acc ->
+             <<p_diff, rest::binary()>> = acc
+             {p_diff, rest}
+           end) do
+      {:ok, {%{pg_description | p_diffs: p_diffs}, rest}}
     end
   end
 

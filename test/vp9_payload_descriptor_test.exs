@@ -6,17 +6,17 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
   describe "VP9 Payload Descriptor parser" do
     test "payload too short" do
       payload = <<184>>
-      assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
+      assert {:error, :malformed_data} == PayloadDescriptor.parse_payload_descriptor(payload)
     end
 
     test "malformed single byte picture id" do
       payload = <<128, 4::3>>
-      assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
+      assert {:error, :malformed_data} == PayloadDescriptor.parse_payload_descriptor(payload)
     end
 
     test "malformed double byte picture id" do
       payload = <<128, 128, 4::3>>
-      assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
+      assert {:error, :malformed_data} == PayloadDescriptor.parse_payload_descriptor(payload)
     end
 
     @doc """
@@ -33,7 +33,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
     """
     test "malformed pdiffs" do
       payload = <<216, 85, 85, 21::5>>
-      assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
+      assert {:error, :malformed_data} == PayloadDescriptor.parse_payload_descriptor(payload)
     end
 
     @doc """
@@ -56,7 +56,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
     """
     test "malformed pg descriptions SS too short" do
       payload = <<2, 8, 2, 8, 170, 52>>
-      assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
+      assert {:error, :malformed_data} == PayloadDescriptor.parse_payload_descriptor(payload)
     end
 
     @doc """
@@ -87,8 +87,8 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       assert {:ok, {actual_descriptor, rest}} =
                PayloadDescriptor.parse_payload_descriptor(payload)
 
-      assert ^expected_descriptor = actual_descriptor
-      assert ^expected_rest = rest
+      assert expected_descriptor == actual_descriptor
+      assert expected_rest == rest
     end
 
     @doc """
@@ -108,7 +108,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
     test "descriptor with I not equal to F" do
       payload = <<168, 219, 255, 52, 85, 233, 29, 109, 237>>
 
-      assert {:error, :malformed_data} = PayloadDescriptor.parse_payload_descriptor(payload)
+      assert {:error, :malformed_data} == PayloadDescriptor.parse_payload_descriptor(payload)
     end
 
     @doc """
@@ -140,8 +140,8 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       assert {:ok, {actual_descriptor, rest}} =
                PayloadDescriptor.parse_payload_descriptor(payload)
 
-      assert ^expected_descriptor = actual_descriptor
-      assert ^expected_rest = rest
+      assert expected_descriptor == actual_descriptor
+      assert expected_rest == rest
     end
 
     @doc """
@@ -177,8 +177,8 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       assert {:ok, {actual_descriptor, rest}} =
                PayloadDescriptor.parse_payload_descriptor(payload)
 
-      assert ^expected_descriptor = actual_descriptor
-      assert ^expected_rest = rest
+      assert expected_descriptor == actual_descriptor
+      assert expected_rest == rest
     end
 
     @doc """
@@ -224,8 +224,8 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       assert {:ok, {actual_descriptor, rest}} =
                PayloadDescriptor.parse_payload_descriptor(payload)
 
-      assert ^expected_descriptor = actual_descriptor
-      assert ^expected_rest = rest
+      assert expected_descriptor == actual_descriptor
+      assert expected_rest == rest
     end
 
     @doc """
@@ -276,8 +276,8 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       assert {:ok, {actual_descriptor, rest}} =
                PayloadDescriptor.parse_payload_descriptor(payload)
 
-      assert ^expected_descriptor = actual_descriptor
-      assert ^expected_rest = rest
+      assert expected_descriptor == actual_descriptor
+      assert expected_rest == rest
     end
   end
 end
