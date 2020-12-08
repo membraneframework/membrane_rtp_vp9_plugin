@@ -27,7 +27,7 @@ defmodule Membrane.Template.Mixfile do
 
   def application do
     [
-      extra_applications: [],
+      extra_applications: []
     ]
   end
 
@@ -40,7 +40,8 @@ defmodule Membrane.Template.Mixfile do
       {:ex_doc, "~> 0.22", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0.0", only: :dev, runtime: false},
       {:credo, "~> 1.4", only: :dev, runtime: false},
-      {:membrane_vp9_format, github: "membraneframework/membrane_vp9_format"}
+      {:membrane_vp9_format, github: "membraneframework/membrane_vp9_format"},
+      {:membrane_caps_rtp, "~> 0.1.0"}
     ]
   end
 
