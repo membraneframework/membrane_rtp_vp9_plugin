@@ -10,7 +10,7 @@ defmodule Membrane.RTP.VP9.Frame do
           last_seq_num: nil | Depayloader.sequence_number()
         }
 
-  defguardp is_next(last_seq_num, next_seq_num) when rem(last_seq_num + 1, 65536) == next_seq_num
+  defguardp is_next(last_seq_num, next_seq_num) when rem(last_seq_num + 1, 65_536) == next_seq_num
 
   defstruct [:last_seq_num, data: []]
 
@@ -23,7 +23,7 @@ defmodule Membrane.RTP.VP9.Frame do
            PayloadDescriptor.parse_payload_descriptor(rtp_data) do
       do_parse(payload_descriptor, payload, seq_num, acc)
     else
-      _ -> {:error, :packet_malformed}
+      _error -> {:error, :packet_malformed}
     end
   end
 

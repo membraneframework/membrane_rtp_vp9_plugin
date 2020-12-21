@@ -25,8 +25,8 @@ defmodule Membrane.RTP.VP9.DepayloaderTest do
         +-+-+-+-+-+-+-+-+
   """
   test "two rtp buffers carrying one vp9 frame" do
-    buffer_1 = %Buffer{payload: <<8, 170, 171>>, metadata: %{rtp: %{sequence_number: 14450}}}
-    buffer_2 = %Buffer{payload: <<4, 172, 173>>, metadata: %{rtp: %{sequence_number: 14451}}}
+    buffer_1 = %Buffer{payload: <<8, 170, 171>>, metadata: %{rtp: %{sequence_number: 14_450}}}
+    buffer_2 = %Buffer{payload: <<4, 172, 173>>, metadata: %{rtp: %{sequence_number: 14_451}}}
     {:ok, depayloader_state} = Depayloader.handle_init([])
 
     assert {{:ok, [redemand: :output]}, depayloader_state} =
@@ -37,7 +37,7 @@ defmodule Membrane.RTP.VP9.DepayloaderTest do
                buffer:
                  {:output,
                   %Buffer{
-                    metadata: %{rtp: %{sequence_number: 14451}},
+                    metadata: %{rtp: %{sequence_number: 14_451}},
                     payload: <<170, 171, 172, 173>>
                   }},
                redemand: :output
@@ -58,7 +58,7 @@ defmodule Membrane.RTP.VP9.DepayloaderTest do
         +-+-+-+-+-+-+-+-+
   """
   test "one rtp buffer carrying one vp9 frame" do
-    buffer = %Buffer{payload: <<12, 170, 171>>, metadata: %{rtp: %{sequence_number: 14450}}}
+    buffer = %Buffer{payload: <<12, 170, 171>>, metadata: %{rtp: %{sequence_number: 14_450}}}
     {:ok, depayloader_state} = Depayloader.handle_init([])
 
     assert {{:ok,
@@ -66,7 +66,7 @@ defmodule Membrane.RTP.VP9.DepayloaderTest do
                buffer:
                  {:output,
                   %Buffer{
-                    metadata: %{rtp: %{sequence_number: 14450}},
+                    metadata: %{rtp: %{sequence_number: 14_450}},
                     payload: <<170, 171>>
                   }},
                redemand: :output
@@ -97,8 +97,8 @@ defmodule Membrane.RTP.VP9.DepayloaderTest do
         +-+-+-+-+-+-+-+-+
   """
   test "missing packet" do
-    buffer_1 = %Buffer{payload: <<8, 170, 171>>, metadata: %{rtp: %{sequence_number: 14450}}}
-    buffer_2 = %Buffer{payload: <<4, 172, 173>>, metadata: %{rtp: %{sequence_number: 14452}}}
+    buffer_1 = %Buffer{payload: <<8, 170, 171>>, metadata: %{rtp: %{sequence_number: 14_450}}}
+    buffer_2 = %Buffer{payload: <<4, 172, 173>>, metadata: %{rtp: %{sequence_number: 14_452}}}
     {:ok, depayloader_state} = Depayloader.handle_init([])
 
     assert {{:ok, [redemand: :output]}, depayloader_state} =

@@ -1,4 +1,5 @@
 defmodule Membrane.RTP.VP9.IVFWritter do
+  @moduledoc false
   use Membrane.Filter
   use Membrane.Log
 
@@ -15,6 +16,7 @@ defmodule Membrane.RTP.VP9.IVFWritter do
   def_output_pad :output, caps: :any
 
   defmodule State do
+    @moduledoc false
     defstruct [:width, :height, :timebase, framecount: 0, header_sent?: false]
   end
 
@@ -97,7 +99,7 @@ defmodule Membrane.RTP.VP9.IVFWritter do
     version = <<0, 0>>
     # note it's little endian
     length_of_header = <<32, 0>>
-    codec_fourCC = "VP90"
+    codec_four_cc = "VP90"
     # conversion to little-endian binary stirngs
     width_le = String.reverse(<<width::16>>)
     height_le = String.reverse(<<height::16>>)
@@ -111,7 +113,7 @@ defmodule Membrane.RTP.VP9.IVFWritter do
     signature <>
       version <>
       length_of_header <>
-      codec_fourCC <>
+      codec_four_cc <>
       width_le <>
       height_le <>
       rate_le <>
