@@ -57,6 +57,30 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
 
   @type tl0picidx :: 0..255
 
+  @type t :: %__MODULE__{
+    first_octet: first_octet(),
+    picture_id: picture_id(),
+    tid: tid(),
+    u: u(),
+    sid: sid(),
+    d: d(),
+    p_diffs: [p_diff()],
+    tl0picidx: tl0picidx(),
+    scalability_structure: ScalabilityStructure.t()
+  }
+
+  defstruct [
+    :first_octet,
+    :picture_id,
+    :tid,
+    :u,
+    :sid,
+    :d,
+    :tl0picidx,
+    :scalability_structure,
+    p_diffs: []
+  ]
+
   defmodule PGDescription do
     @moduledoc false
 
@@ -98,30 +122,6 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
     @enforce_keys [:first_octet]
     defstruct [:first_octet, dimensions: [], pg_descriptions: []]
   end
-
-  @type t :: %__MODULE__{
-          first_octet: first_octet(),
-          picture_id: picture_id(),
-          tid: tid(),
-          u: u(),
-          sid: sid(),
-          d: d(),
-          p_diffs: [p_diff()],
-          tl0picidx: tl0picidx(),
-          scalability_structure: ScalabilityStructure.t()
-        }
-
-  defstruct [
-    :first_octet,
-    :picture_id,
-    :tid,
-    :u,
-    :sid,
-    :d,
-    :tl0picidx,
-    :scalability_structure,
-    p_diffs: []
-  ]
 
   @spec parse_payload_descriptor(binary()) :: {:error, :malformed_data} | {:ok, {t(), binary()}}
   def parse_payload_descriptor(raw_payload)
