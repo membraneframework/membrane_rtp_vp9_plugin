@@ -128,7 +128,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
 
       expected_descriptor = %PayloadDescriptor{
         first_octet: 184,
-        picture_id: 56319,
+        picture_id: 56_319,
         tid: 1,
         u: 1,
         d: 0,
@@ -209,8 +209,8 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       expected_ss = %ScalabilityStructure{
         first_octet: 48,
         dimensions: [
-          %SSDimension{width: 21845, height: 21845},
-          %SSDimension{width: 21845, height: 21845}
+          %SSDimension{width: 21_845, height: 21_845},
+          %SSDimension{width: 21_845, height: 21_845}
         ]
       }
 
