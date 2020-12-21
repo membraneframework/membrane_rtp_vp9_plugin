@@ -54,7 +54,11 @@ defmodule Membrane.RTP.VP9.DepayloaderWithSessionBinTest do
           {:tee, Tee.Parallel}
         ],
         links: [
-          link(:rtp) |> via_out(Pad.ref(:output, ssrc)) |> to(:tee) |> to({:ivf_writter, ssrc}) |> to({:file_sink, ssrc}),
+          link(:rtp)
+          |> via_out(Pad.ref(:output, ssrc))
+          |> to(:tee)
+          |> to({:ivf_writter, ssrc})
+          |> to({:file_sink, ssrc}),
           link(:tee) |> to({:sink, ssrc})
         ]
       }
@@ -91,7 +95,8 @@ defmodule Membrane.RTP.VP9.DepayloaderWithSessionBinTest do
 
     assert_start_of_stream(pipeline, {:file_sink, ^video_ssrc})
 
-    1..input.video.frames_n |> Enum.each(fn _i ->
+    1..input.video.frames_n
+    |> Enum.each(fn _i ->
       assert_sink_buffer(pipeline, {:sink, video_ssrc}, %Buffer{}, 10_000)
     end)
 

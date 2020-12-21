@@ -44,7 +44,8 @@ defmodule Membrane.Template.Mixfile do
       {:membrane_element_tee, "~> 0.3.0"},
       {:membrane_vp9_format, github: "membraneframework/membrane_vp9_format"},
       {:membrane_element_pcap, github: "membraneframework/membrane-element-pcap", only: :test},
-      {:membrane_rtp_plugin, github: "membraneframework/membrane_rtp_plugin", branch: :sending, only: :test},
+      {:membrane_rtp_plugin,
+       github: "membraneframework/membrane_rtp_plugin", branch: :sending, only: :test},
       {:membrane_file_plugin, "~> 0.5.0", only: :test},
       {:membrane_caps_rtp, "~> 0.1.0"}
     ]
