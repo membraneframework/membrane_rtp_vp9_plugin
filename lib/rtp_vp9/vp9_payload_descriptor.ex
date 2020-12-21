@@ -58,6 +58,8 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   @type tl0picidx :: 0..255
 
   defmodule PGDescription do
+    @moduledoc false
+
     alias Membrane.RTP.VP9.PayloadDescriptor
 
     @type t :: %__MODULE__{
@@ -70,9 +72,11 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   end
 
   defmodule SSDimension do
+    @moduledoc false
+
     @type t :: %__MODULE__{
-            width: 0..65535,
-            height: 0..65535
+            width: 0..65_535,
+            height: 0..65_535
           }
 
     @enforce_keys [:width, :height]
@@ -80,6 +84,8 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   end
 
   defmodule ScalabilityStructure do
+    @moduledoc false
+
     alias Membrane.RTP.VP9.PayloadDescriptor
     alias Membrane.RTP.VP9.PayloadDescriptor.{SSDimension, PGDescription}
 
@@ -135,12 +141,12 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
            {:ok, {ss, rest}} <- get_scalability_structure(header, rest) do
         {:ok, {%{descriptor_acc | scalability_structure: ss}, rest}}
       else
-        _ -> {:error, :malformed_data}
+        _error -> {:error, :malformed_data}
       end
     end
   end
 
-  def parse_payload_descriptor(_), do: {:error, :malformed_data}
+  def parse_payload_descriptor(_binary), do: {:error, :malformed_data}
 
   # no picture id (PID)
   defp get_pid(<<0::1, _::7>>, rest, descriptor_acc) when byte_size(rest) > 0,
@@ -158,7 +164,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
         <<pid::16>> = <<pid, second_byte>>
         {:ok, {%{descriptor_acc | picture_id: pid}, rest}}
 
-      _ ->
+      _error ->
         {:error, :malformed_data}
     end
   end
@@ -234,7 +240,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
           pg_descriptions: pg_descriptions
         }, rest}}
     else
-      _ -> {:error, :malformed_data}
+      _error -> {:error, :malformed_data}
     end
   end
 
@@ -261,7 +267,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
             | next_dims
           ], rest}}
 
-      _ ->
+      _error ->
         {:error, :malformed_data}
     end
   end
@@ -283,12 +289,12 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
                   {:ok, {pg_description, rest}} <- ss_get_pg_description(rest) do
                {pg_description, {:ok, rest}}
              else
-               _ -> {nil, {:error, :malformed_data}}
+               _error -> {nil, {:error, :malformed_data}}
              end
            end) do
       {:ok, {descriptions, rest}}
     else
-      _ -> {:error, :malformed_data}
+      _error -> {:error, :malformed_data}
     end
   end
 
@@ -315,5 +321,5 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
     end
   end
 
-  defp ss_get_pg_description(_), do: {:error, :malformed_data}
+  defp ss_get_pg_description(_binary), do: {:error, :malformed_data}
 end

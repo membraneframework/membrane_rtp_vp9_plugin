@@ -23,7 +23,7 @@ defmodule Membrane.RTP.VP9.Frame do
            PayloadDescriptor.parse_payload_descriptor(rtp_data) do
       do_parse(payload_descriptor, payload, seq_num, acc)
     else
-      _ -> {:error, :packet_malformed}
+      _error -> {:error, :packet_malformed}
     end
   end
 
