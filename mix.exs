@@ -41,6 +41,7 @@ defmodule Membrane.Template.Mixfile do
       {:dialyxir, "~> 1.0.0", only: :dev, runtime: false},
       {:credo, "~> 1.4", only: :dev, runtime: false},
       {:membrane_vp9_format, github: "membraneframework/membrane_vp9_format"},
+      {:membrane_remote_stream_format, "~> 0.1.0"},
       {:membrane_caps_rtp, "~> 0.1.0"}
     ]
   end
