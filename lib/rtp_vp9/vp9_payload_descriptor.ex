@@ -43,7 +43,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
 
   @type first_octet :: binary()
 
-  @type picture_id :: 0..32767
+  @type picture_id :: 0..32_767
 
   @type tid :: 0..7
 

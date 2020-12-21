@@ -209,8 +209,8 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       expected_ss = %ScalabilityStructure{
         first_octet: 48,
         dimensions: [
-          %SSDimension{width: 21845, height: 21845},
-          %SSDimension{width: 21845, height: 21845}
+          %SSDimension{width: 21_845, height: 21_845},
+          %SSDimension{width: 21_845, height: 21_845}
         ]
       }
 
