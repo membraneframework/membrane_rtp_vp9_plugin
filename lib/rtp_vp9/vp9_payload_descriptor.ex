@@ -58,16 +58,16 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   @type tl0picidx :: 0..255
 
   @type t :: %__MODULE__{
-    first_octet: first_octet(),
-    picture_id: picture_id(),
-    tid: tid(),
-    u: u(),
-    sid: sid(),
-    d: d(),
-    p_diffs: [p_diff()],
-    tl0picidx: tl0picidx(),
-    scalability_structure: ScalabilityStructure.t()
-  }
+          first_octet: first_octet(),
+          picture_id: picture_id(),
+          tid: tid(),
+          u: u(),
+          sid: sid(),
+          d: d(),
+          p_diffs: [p_diff()],
+          tl0picidx: tl0picidx(),
+          scalability_structure: ScalabilityStructure.t()
+        }
 
   defstruct [
     :first_octet,
