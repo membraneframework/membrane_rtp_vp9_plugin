@@ -173,4 +173,6 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+# test results dir
+results
 # End of https://www.gitignore.io/api/c,vim,linux,macos,elixir,windows,visualstudiocode
