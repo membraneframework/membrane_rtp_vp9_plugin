@@ -6,9 +6,9 @@ defmodule Membrane.RTP.VP9.DepayloaderWithSessionBinTest do
   alias Membrane.Testing
   alias Membrane.{RTP, Buffer}
   alias Membrane.RTP.VP9.IVFWritter
-  alias Membrane.Element.Tee
 
   @ivf_result_file "./test/results/result.ivf"
+  @ivf_reference_file "./test/fixtures/vp9_sample.ivf"
 
   @rtp_input %{
     pcap: "test/fixtures/vp9_sample.pcap",
@@ -49,17 +49,14 @@ defmodule Membrane.RTP.VP9.DepayloaderWithSessionBinTest do
       spec = %ParentSpec{
         children: [
           {{:file_sink, ssrc}, %Membrane.File.Sink{location: result_file}},
-          {{:ivf_writter, ssrc}, %IVFWritter{width: video.width, height: video.height}},
-          {{:sink, ssrc}, Testing.Sink},
-          {:tee, Tee.Parallel}
+          {{:ivf_writter, ssrc},
+           %IVFWritter{width: video.width, height: video.height, scale: 1, rate: 30}}
         ],
         links: [
           link(:rtp)
           |> via_out(Pad.ref(:output, ssrc))
-          |> to(:tee)
           |> to({:ivf_writter, ssrc})
-          |> to({:file_sink, ssrc}),
-          link(:tee) |> to({:sink, ssrc})
+          |> to({:file_sink, ssrc})
         ]
       }
 
@@ -95,13 +92,11 @@ defmodule Membrane.RTP.VP9.DepayloaderWithSessionBinTest do
 
     assert_start_of_stream(pipeline, {:file_sink, ^video_ssrc})
 
-    1..input.video.frames_n
-    |> Enum.each(fn _i ->
-      assert_sink_buffer(pipeline, {:sink, video_ssrc}, %Buffer{}, 10_000)
-    end)
-
     assert_end_of_stream(pipeline, {:file_sink, ^video_ssrc})
+
     Testing.Pipeline.stop(pipeline)
     assert_pipeline_playback_changed(pipeline, _, :stopped)
+
+    File.read!(@ivf_result_file) == File.read!(@ivf_reference_file)
   end
 end
