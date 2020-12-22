@@ -25,8 +25,8 @@ defmodule Membrane.RTP.VP9.Depayloader do
     defstruct frame_acc: nil
   end
 
-  @spec handle_init :: {:ok, Membrane.RTP.VP9.Depayloader.State.t()}
-  def handle_init(), do: {:ok, %State{}}
+  @impl true
+  def handle_init(_options), do: {:ok, %State{}}
 
   @impl true
   def handle_caps(:input, _caps, _context, state) do

@@ -4,7 +4,7 @@ defmodule Membrane.RTP.VP9.IVFWritter do
   use Membrane.Log
 
   use Ratio
-  alias Membrane.{Buffer, Time}
+  alias Membrane.{Buffer, Time, RemoteStream}
   alias Membrane.Caps.VP9
 
   def_options width: [spec: [integer], description: "width of frame"],
@@ -12,7 +12,10 @@ defmodule Membrane.RTP.VP9.IVFWritter do
               scale: [spec: [integer], default: 1, description: "scale"],
               rate: [spec: [integer], default: 1_000_000, description: "rate"]
 
-  def_input_pad :input, caps: {VP9, []}, demand_unit: :buffers
+  def_input_pad :input,
+    caps: {RemoteStream, content_format: VP9, type: :packetized},
+    demand_unit: :buffers
+
   def_output_pad :output, caps: :any
 
   defmodule State do

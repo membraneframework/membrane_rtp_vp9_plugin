@@ -27,7 +27,8 @@ defmodule Membrane.Template.Mixfile do
 
   def application do
     [
-      extra_applications: []
+      extra_applications: [],
+      mod: {Membrane.RTP.VP9.Plugin.App, []}
     ]
   end
 
