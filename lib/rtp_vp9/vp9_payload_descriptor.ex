@@ -127,19 +127,16 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
       when byte_size(rest) > 0 do
     <<i::1, _p::1, _l::1, f::1, _bevz::4>> = header
 
-    if i != f do
-      {:error, :malformed_data}
+    with true <- i == f,
+         <<decoded_header>> <- header,
+         {:ok, {descriptor_acc, rest}} <-
+           get_pid(header, rest, %__MODULE__{first_octet: decoded_header}),
+         {:ok, {descriptor_acc, rest}} <- get_layer_indices(header, rest, descriptor_acc),
+         {:ok, {descriptor_acc, rest}} <- get_pdiffs(header, rest, 0, descriptor_acc),
+         {:ok, {ss, rest}} <- get_scalability_structure(header, rest) do
+      {:ok, {%{descriptor_acc | scalability_structure: ss}, rest}}
     else
-      with <<decoded_header>> <- header,
-           {:ok, {descriptor_acc, rest}} <-
-             get_pid(header, rest, %__MODULE__{first_octet: decoded_header}),
-           {:ok, {descriptor_acc, rest}} <- get_layer_indices(header, rest, descriptor_acc),
-           {:ok, {descriptor_acc, rest}} <- get_pdiffs(header, rest, 0, descriptor_acc),
-           {:ok, {ss, rest}} <- get_scalability_structure(header, rest) do
-        {:ok, {%{descriptor_acc | scalability_structure: ss}, rest}}
-      else
-        _error -> {:error, :malformed_data}
-      end
+      _error -> {:error, :malformed_data}
     end
   end
 
@@ -160,9 +157,6 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
         <<second_byte, rest::binary()>> = rest
         <<pid::16>> = <<pid, second_byte>>
         {:ok, {%{descriptor_acc | picture_id: pid}, rest}}
-
-      _error ->
-        {:error, :malformed_data}
     end
   end
 
