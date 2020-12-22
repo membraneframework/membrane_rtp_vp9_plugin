@@ -18,7 +18,7 @@ defmodule Membrane.RTP.VP9.Depayloader do
 
   def_output_pad :output, caps: {VP9, []}
 
-  def_input_pad :input, caps: {RTP, []}, demand_unit: :buffers
+  def_input_pad :input, caps: RTP, demand_unit: :buffers
 
   defmodule State do
     @moduledoc false
