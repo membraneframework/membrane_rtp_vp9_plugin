@@ -7,7 +7,8 @@ defmodule Membrane.RTP.VP9.DepayloaderWithSessionBinTest do
   alias Membrane.{RTP, Buffer}
   alias Membrane.RTP.VP9.IVFWritter
 
-  @ivf_result_file "./test/results/result.ivf"
+  @results_dir "./test/results"
+  @ivf_result_file @results_dir <> "/result.ivf"
   @ivf_reference_file "./test/fixtures/vp9_sample.ivf"
 
   @rtp_input %{
@@ -74,6 +75,9 @@ defmodule Membrane.RTP.VP9.DepayloaderWithSessionBinTest do
   end
 
   defp test_stream(input, result_file) do
+    if !File.exists?(@results_dir) do
+      File.mkdir!(@results_dir)
+    end
     {:ok, pipeline} =
       %Testing.Pipeline.Options{
         module: TestPipeline,
