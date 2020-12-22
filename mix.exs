@@ -27,8 +27,7 @@ defmodule Membrane.Template.Mixfile do
 
   def application do
     [
-      extra_applications: [],
-      mod: {Membrane.RTP.VP9.Plugin.App, []}
+      extra_applications: []
     ]
   end
 
@@ -47,6 +46,7 @@ defmodule Membrane.Template.Mixfile do
       {:membrane_rtp_plugin,
        github: "membraneframework/membrane_rtp_plugin", branch: :sending, only: :test},
       {:membrane_file_plugin, "~> 0.5.0", only: :test},
+      {:membrane_remote_stream_format, "~> 0.1.0"},
       {:membrane_caps_rtp, "~> 0.1.0"}
     ]
   end

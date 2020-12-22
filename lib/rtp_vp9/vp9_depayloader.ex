@@ -11,12 +11,12 @@ defmodule Membrane.RTP.VP9.Depayloader do
   alias Membrane.RTP
   alias Membrane.RTP.VP9.Frame
   alias Membrane.Caps.VP9
-  alias Membrane.Buffer
+  alias Membrane.{Buffer, RemoteStream}
   alias Membrane.Event.Discontinuity
 
   @type sequence_number :: 0..65_535
 
-  def_output_pad :output, caps: {VP9, []}
+  def_output_pad :output, caps: {RemoteStream, content_format: VP9, type: :packetized}
 
   def_input_pad :input, caps: RTP, demand_unit: :buffers
 
@@ -25,14 +25,13 @@ defmodule Membrane.RTP.VP9.Depayloader do
     defstruct frame_acc: nil
   end
 
-  @impl true
-  def handle_init(_options) do
-    {:ok, %State{}}
-  end
+  @spec handle_init :: {:ok, Membrane.RTP.VP9.Depayloader.State.t()}
+  def handle_init(), do: {:ok, %State{}}
 
   @impl true
   def handle_caps(:input, _caps, _context, state) do
-    {:ok, state}
+    caps = %RemoteStream{content_format: VP9, type: :packetized}
+    {{:ok, caps: {:output, caps}}, state}
   end
 
   @impl true
