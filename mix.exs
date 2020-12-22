@@ -41,7 +41,7 @@ defmodule Membrane.Template.Mixfile do
       {:ex_doc, "~> 0.22", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0.0", only: :dev, runtime: false},
       {:credo, "~> 1.4", only: :dev, runtime: false},
-      {:membrane_element_tee, "~> 0.3.0"},
+      {:membrane_rtp_format, "~> 0.3.0"},
       {:membrane_vp9_format, github: "membraneframework/membrane_vp9_format"},
       {:membrane_element_pcap, github: "membraneframework/membrane-element-pcap", only: :test},
       {:membrane_rtp_plugin,

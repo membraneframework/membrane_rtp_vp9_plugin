@@ -63,14 +63,15 @@ defmodule Membrane.RTP.VP9.IVFWritter do
     {{:ok, buffer: {:output, %Buffer{buffer | payload: ivf_frame}}, redemand: :output}, state}
   end
 
-  @doc """
-    bytes 0-3    size of frame in bytes (not including the 12-byte header)
-    bytes 4-11   64-bit presentation timestamp
-    bytes 12..   frame data
 
-    Function firstly calculat
-    # calculating ivf timestamp from membrane timestamp(timebase for membrane timestamp is nanosecod, and timebase for ivf is passed in options)
-  """
+  # IVF Frame Header:
+  # bytes 0-3    size of frame in bytes (not including the 12-byte header)
+  # bytes 4-11   64-bit presentation timestamp
+  # bytes 12..   frame data
+
+  # Function firstly calculat
+  # calculating ivf timestamp from membrane timestamp(timebase for membrane timestamp is nanosecod, and timebase for ivf is passed in options)
+
   defp create_ivf_frame_header(size, timestamp, timebase) do
     ivf_timestamp = timestamp / (timebase * Time.second())
     # conversion to little-endian binary stirngs
@@ -80,18 +81,18 @@ defmodule Membrane.RTP.VP9.IVFWritter do
     size_le <> timestamp_le
   end
 
-  @doc """
-    bytes 0-3    signature: 'DKIF'
-    bytes 4-5    version (should be 0)
-    bytes 6-7    length of header in bytes
-    bytes 8-11   codec FourCC (e.g., 'VP80')
-    bytes 12-13  width in pixels
-    bytes 14-15  height in pixels
-    bytes 16-23  time base denominator (rate)
-    bytes 20-23  time base numerator (scale)
-    bytes 24-27  number of frames in file
-    bytes 28-31  unused
-  """
+  # IVF Header:
+  # bytes 0-3    signature: 'DKIF'
+  # bytes 4-5    version (should be 0)
+  # bytes 6-7    length of header in bytes
+  # bytes 8-11   codec FourCC (e.g., 'VP80')
+  # bytes 12-13  width in pixels
+  # bytes 14-15  height in pixels
+  # bytes 16-23  time base denominator (rate)
+  # bytes 20-23  time base numerator (scale)
+  # bytes 24-27  number of frames in file
+  # bytes 28-31  unused
+
   defp create_ivf_header(width, height, timebase) do
     %Ratio{denominator: rate, numerator: scale} = timebase
 
