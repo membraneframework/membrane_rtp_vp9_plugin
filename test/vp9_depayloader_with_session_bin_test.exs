@@ -78,6 +78,7 @@ defmodule Membrane.RTP.VP9.DepayloaderWithSessionBinTest do
     if !File.exists?(@results_dir) do
       File.mkdir!(@results_dir)
     end
+
     {:ok, pipeline} =
       %Testing.Pipeline.Options{
         module: TestPipeline,
