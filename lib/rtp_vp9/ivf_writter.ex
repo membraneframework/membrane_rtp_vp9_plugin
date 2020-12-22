@@ -63,7 +63,6 @@ defmodule Membrane.RTP.VP9.IVFWritter do
     {{:ok, buffer: {:output, %Buffer{buffer | payload: ivf_frame}}, redemand: :output}, state}
   end
 
-
   # IVF Frame Header:
   # bytes 0-3    size of frame in bytes (not including the 12-byte header)
   # bytes 4-11   64-bit presentation timestamp
