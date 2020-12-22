@@ -41,6 +41,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   ```
   """
 
+
   @type first_octet :: binary()
 
   @type picture_id :: 0..32_767
@@ -83,7 +84,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
 
   defmodule PGDescription do
     @moduledoc false
-
+    
     alias Membrane.RTP.VP9.PayloadDescriptor
 
     @type t :: %__MODULE__{
@@ -133,7 +134,6 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
     if i != f do
       {:error, :malformed_data}
     else
-      # with <<decoded_header>> <- header,
       with {:ok, {descriptor_acc, rest}} <-
              get_pid(header, rest, %__MODULE__{first_octet: header}),
            {:ok, {descriptor_acc, rest}} <- get_layer_indices(header, rest, descriptor_acc),
