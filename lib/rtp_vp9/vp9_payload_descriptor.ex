@@ -41,7 +41,6 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   ```
   """
 
-
   @type first_octet :: binary()
 
   @type picture_id :: 0..32_767
@@ -84,7 +83,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
 
   defmodule PGDescription do
     @moduledoc false
-    
+
     alias Membrane.RTP.VP9.PayloadDescriptor
 
     @type t :: %__MODULE__{
