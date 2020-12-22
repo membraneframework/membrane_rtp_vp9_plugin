@@ -15,7 +15,7 @@ defmodule Membrane.RTP.VP9.Depayloader do
 
   @type sequence_number :: 0..65_535
 
-  def_output_pad :output, caps: {RemoteStream, content_format: VP9}
+  def_output_pad :output, caps: {RemoteStream, content_format: VP9, type: :packetized}
 
   def_input_pad :input, caps: RTP, demand_unit: :buffers
 
@@ -29,7 +29,8 @@ defmodule Membrane.RTP.VP9.Depayloader do
 
   @impl true
   def handle_caps(:input, _caps, _context, state) do
-    {:ok, state}
+    caps = %RemoteStream{content_format: VP9, type: :packetized}
+    {{:ok, caps: {:output, caps}}, state}
   end
 
   @impl true
