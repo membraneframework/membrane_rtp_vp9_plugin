@@ -5,7 +5,7 @@ defmodule Membrane.RTP.VP9.DepayloaderWithSessionBinTest do
 
   alias Membrane.Testing
   alias Membrane.{RTP, Buffer}
-  alias Membrane.RTP.VP9.IVFWritter
+  alias Membrane.Element.IVF
 
   @results_dir "./test/results"
   @ivf_result_file @results_dir <> "/result.ivf"
@@ -51,7 +51,7 @@ defmodule Membrane.RTP.VP9.DepayloaderWithSessionBinTest do
         children: [
           {{:file_sink, ssrc}, %Membrane.File.Sink{location: result_file}},
           {{:ivf_writter, ssrc},
-           %IVFWritter{width: video.width, height: video.height, scale: 1, rate: 30}}
+           %IVF.VP9{width: video.width, height: video.height, scale: 1, rate: 30}}
         ],
         links: [
           link(:rtp)
