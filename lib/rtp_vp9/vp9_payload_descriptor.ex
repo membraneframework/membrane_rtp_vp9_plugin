@@ -130,18 +130,15 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
       when byte_size(rest) > 0 do
     <<i::1, _p::1, _l::1, f::1, _bevz::4>> = header
 
-    if i != f do
-      {:error, :malformed_data}
+    with true <- i == f,
+         {:ok, {descriptor_acc, rest}} <-
+           get_pid(header, rest, %__MODULE__{first_octet: header}),
+         {:ok, {descriptor_acc, rest}} <- get_layer_indices(header, rest, descriptor_acc),
+         {:ok, {descriptor_acc, rest}} <- get_pdiffs(header, rest, 0, descriptor_acc),
+         {:ok, {ss, rest}} <- get_scalability_structure(header, rest) do
+      {:ok, {%{descriptor_acc | scalability_structure: ss}, rest}}
     else
-      with {:ok, {descriptor_acc, rest}} <-
-             get_pid(header, rest, %__MODULE__{first_octet: header}),
-           {:ok, {descriptor_acc, rest}} <- get_layer_indices(header, rest, descriptor_acc),
-           {:ok, {descriptor_acc, rest}} <- get_pdiffs(header, rest, 0, descriptor_acc),
-           {:ok, {ss, rest}} <- get_scalability_structure(header, rest) do
-        {:ok, {%{descriptor_acc | scalability_structure: ss}, rest}}
-      else
-        _error -> {:error, :malformed_data}
-      end
+      _error -> {:error, :malformed_data}
     end
   end
 
@@ -162,9 +159,6 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
         <<second_byte, rest::binary()>> = rest
         <<pid::16>> = <<pid, second_byte>>
         {:ok, {%{descriptor_acc | picture_id: pid}, rest}}
-
-      _error ->
-        {:error, :malformed_data}
     end
   end
 
@@ -281,19 +275,17 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   defp ss_get_pg_descriptions(<<_n_s::3, _y::1, 1::1, _::3>>, rest) do
     <<n_g, rest::binary()>> = rest
 
-    with {descriptions, {:ok, rest}} <-
-           1..n_g
-           |> Enum.map_reduce({:ok, rest}, fn _i, acc ->
-             with {:ok, rest} <- acc,
-                  {:ok, {pg_description, rest}} <- ss_get_pg_description(rest) do
-               {pg_description, {:ok, rest}}
-             else
-               _error -> {nil, {:error, :malformed_data}}
-             end
-           end) do
+    {maybe_descriptions, rest} =
+      1..n_g
+      |> Bunch.Enum.try_map_reduce(rest, fn _i, rest ->
+        case ss_get_pg_description(rest) do
+          {:ok, {pg_description, rest}} -> {{:ok, pg_description}, rest}
+          _error -> {{:error, :malformed_data}, rest}
+        end
+      end)
+
+    with {:ok, descriptions} <- maybe_descriptions do
       {:ok, {descriptions, rest}}
-    else
-      _error -> {:error, :malformed_data}
     end
   end
 
@@ -310,14 +302,9 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
        when byte_size(rest) > r do
     pg_description = %PGDescription{tid: tid, u: u}
 
-    with {p_diffs, rest} <-
-           1..r
-           |> Enum.map_reduce(rest, fn _i, acc ->
-             <<p_diff, rest::binary()>> = acc
-             {p_diff, rest}
-           end) do
-      {:ok, {%{pg_description | p_diffs: p_diffs}, rest}}
-    end
+    <<p_diffs::binary-size(r), rest::binary()>> = rest
+
+    {:ok, {%{pg_description | p_diffs: :binary.bin_to_list(p_diffs)}, rest}}
   end
 
   defp ss_get_pg_description(_binary), do: {:error, :malformed_data}
