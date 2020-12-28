@@ -27,8 +27,7 @@ defmodule Membrane.RTP.VP9.MixProject do
 
   def application do
     [
-      extra_applications: [],
-      mod: {Membrane.RTP.VP9.Plugin.App, []}
+      extra_applications: []
     ]
   end
 
