@@ -41,7 +41,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   ```
   """
 
-  @type first_octet :: 0..255
+  @type first_octet :: binary()
 
   @type picture_id :: 0..32_767
 
@@ -56,45 +56,6 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   @type p_diff :: 0..255
 
   @type tl0picidx :: 0..255
-
-  defmodule PGDescription do
-    @moduledoc false
-    alias Membrane.RTP.VP9.PayloadDescriptor
-
-    @type t :: %__MODULE__{
-            tid: PayloadDescriptor.tid(),
-            u: PayloadDescriptor.u(),
-            p_diffs: [PayloadDescriptor.p_diff()]
-          }
-
-    defstruct [:tid, :u, p_diffs: []]
-  end
-
-  defmodule SSDimension do
-    @moduledoc false
-    @type t :: %__MODULE__{
-            width: 0..65_535,
-            height: 0..65_535
-          }
-
-    @enforce_keys [:width, :height]
-    defstruct @enforce_keys
-  end
-
-  defmodule ScalabilityStructure do
-    @moduledoc false
-    alias Membrane.RTP.VP9.PayloadDescriptor
-    alias Membrane.RTP.VP9.PayloadDescriptor.{SSDimension, PGDescription}
-
-    @type t :: %__MODULE__{
-            first_octet: PayloadDescriptor.first_octet(),
-            dimensions: [SSDimension.t()],
-            pg_descriptions: [PGDescription.t()]
-          }
-
-    @enforce_keys [:first_octet]
-    defstruct [:first_octet, dimensions: [], pg_descriptions: []]
-  end
 
   @type t :: %__MODULE__{
           first_octet: first_octet(),
@@ -120,6 +81,48 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
     p_diffs: []
   ]
 
+  defmodule PGDescription do
+    @moduledoc false
+
+    alias Membrane.RTP.VP9.PayloadDescriptor
+
+    @type t :: %__MODULE__{
+            tid: PayloadDescriptor.tid(),
+            u: PayloadDescriptor.u(),
+            p_diffs: [PayloadDescriptor.p_diff()]
+          }
+
+    defstruct [:tid, :u, p_diffs: []]
+  end
+
+  defmodule SSDimension do
+    @moduledoc false
+
+    @type t :: %__MODULE__{
+            width: 0..65_535,
+            height: 0..65_535
+          }
+
+    @enforce_keys [:width, :height]
+    defstruct @enforce_keys
+  end
+
+  defmodule ScalabilityStructure do
+    @moduledoc false
+
+    alias Membrane.RTP.VP9.PayloadDescriptor
+    alias Membrane.RTP.VP9.PayloadDescriptor.{SSDimension, PGDescription}
+
+    @type t :: %__MODULE__{
+            first_octet: PayloadDescriptor.first_octet(),
+            dimensions: [SSDimension.t()],
+            pg_descriptions: [PGDescription.t()]
+          }
+
+    @enforce_keys [:first_octet]
+    defstruct [:first_octet, dimensions: [], pg_descriptions: []]
+  end
+
   @spec parse_payload_descriptor(binary()) :: {:error, :malformed_data} | {:ok, {t(), binary()}}
   def parse_payload_descriptor(raw_payload)
 
@@ -128,9 +131,8 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
     <<i::1, _p::1, _l::1, f::1, _bevz::4>> = header
 
     with true <- i == f,
-         <<decoded_header>> <- header,
          {:ok, {descriptor_acc, rest}} <-
-           get_pid(header, rest, %__MODULE__{first_octet: decoded_header}),
+           get_pid(header, rest, %__MODULE__{first_octet: header}),
          {:ok, {descriptor_acc, rest}} <- get_layer_indices(header, rest, descriptor_acc),
          {:ok, {descriptor_acc, rest}} <- get_pdiffs(header, rest, 0, descriptor_acc),
          {:ok, {ss, rest}} <- get_scalability_structure(header, rest) do
