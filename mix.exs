@@ -6,7 +6,7 @@ defmodule Membrane.RTP.VP9.MixProject do
 
   def project do
     [
-      app: :membrane_template_plugin,
+      app: :membrane_rtp_vp9_plugin,
       version: @version,
       elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
