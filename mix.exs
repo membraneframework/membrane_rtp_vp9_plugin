@@ -37,7 +37,7 @@ defmodule Membrane.RTP.VP9.MixProject do
 
   defp deps do
     [
-      {:membrane_core, "~> 0.6.0", override: true},
+      {:membrane_core, "~> 0.6.1", override: true},
       {:ex_doc, "~> 0.22", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0.0", only: :dev, runtime: false},
       {:credo, "~> 1.4", only: :dev, runtime: false},
@@ -45,7 +45,7 @@ defmodule Membrane.RTP.VP9.MixProject do
       {:membrane_vp9_format, github: "membraneframework/membrane_vp9_format"},
       {:membrane_element_pcap, github: "membraneframework/membrane-element-pcap", only: :test},
       {:membrane_rtp_plugin,
-       github: "membraneframework/membrane_rtp_plugin", branch: :sending, only: :test},
+       github: "membraneframework/membrane_rtp_plugin", only: :test},
       {:membrane_element_ivf,
        github: "membraneframework/membrane-element-ivf",
        branch: :"moved-from-vp9-plugin",
