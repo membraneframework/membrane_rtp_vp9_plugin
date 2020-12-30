@@ -127,7 +127,10 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
       when byte_size(rest) > 0 do
     <<i::1, _p::1, _l::1, f::1, _bevz::4>> = header
 
-    with true <- i == f,
+    # If the I bit is set to zero, then F MUST also be set to zero
+    # Relationship between I and F bit can by described by logic formula
+    #         ~I => ~F which is equivalent to (I or ~F)
+    with true <- i == 1 or not (f == 1),
          <<decoded_header>> <- header,
          {:ok, {descriptor_acc, rest}} <-
            get_pid(header, rest, %__MODULE__{first_octet: decoded_header}),
