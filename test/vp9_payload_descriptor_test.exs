@@ -94,7 +94,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
     @doc """
          I P L F B E V Z
         +-+-+-+-+-+-+-+-+
-        |1|0|1|0|1|0|0|0| (FIRST OCTET) Note: I != F
+        |0|0|1|1|1|0|0|0| (FIRST OCTET) Note: I = 0 and F = 1 which is not allowed
         +-+-+-+-+-+-+-+-+
     I:  |1|1 0 1 1 0 1 1| (EXTENDED PICTURE ID)
         |1 1 1 1 1 1 1 1|
@@ -104,9 +104,8 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
         |0 1 0 1 0 1 0 1| TL0PICIDX
         +-+-+-+-+-+-+-+-+
     """
-
-    test "descriptor with I not equal to F" do
-      payload = <<168, 219, 255, 52, 85, 233, 29, 109, 237>>
+    test "descriptor with I equal to 0 and F equal to 1" do
+      payload = <<56, 219, 255, 52, 85, 233, 29, 109, 237>>
 
       assert {:error, :malformed_data} == PayloadDescriptor.parse_payload_descriptor(payload)
     end
