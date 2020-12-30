@@ -1,7 +1,8 @@
 # Membrane Multimedia Framework: RTP VP9
 
-[![Hex.pm](https://img.shields.io/hexpm/v/membrane_template_plugin.svg)](https://hex.pm/packages/membrane_template_plugin)
-[![CircleCI](https://circleci.com/gh/membraneframework/membrane_template_plugin.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_template_plugin)
+[![Hex.pm](https://img.shields.io/hexpm/v/membrane_rtp_vp9_plugin.svg)](https://hex.pm/packages/membrane_rtp_vp9_plugin)
+[![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_rtp_vp9_plugin/)
+[![CircleCI](https://circleci.com/gh/membraneframework/membrane_rtp_vp9_plugin.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_rtp_vp9_plugin)
 
 This repository provides elements for payloading and depayloading VP9.
 
