@@ -130,7 +130,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
       when byte_size(rest) > 0 do
     <<i::1, _p::1, _l::1, f::1, _bevz::4>> = header
 
-    with true <- i == f,
+    with false <- i == 0 and f == 1,
          {:ok, {descriptor_acc, rest}} <-
            get_pid(header, rest, %__MODULE__{first_octet: header}),
          {:ok, {descriptor_acc, rest}} <- get_layer_indices(header, rest, descriptor_acc),
