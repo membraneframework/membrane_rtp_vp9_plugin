@@ -74,7 +74,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       payload = <<184, 91, 52, 233, 29, 109, 237>>
 
       expected_descriptor = %PayloadDescriptor{
-        first_octet: 184,
+        first_octet: <<184>>,
         picture_id: 91,
         tid: 1,
         u: 1,
@@ -104,7 +104,6 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
         |0 1 0 1 0 1 0 1| TL0PICIDX
         +-+-+-+-+-+-+-+-+
     """
-
     test "descriptor with I equal to 0 and F equal to 1" do
       payload = <<56, 219, 255, 52, 85, 233, 29, 109, 237>>
 
@@ -127,7 +126,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       payload = <<184, 219, 255, 52, 233, 29, 109, 237>>
 
       expected_descriptor = %PayloadDescriptor{
-        first_octet: 184,
+        first_octet: <<184>>,
         picture_id: 56_319,
         tid: 1,
         u: 1,
@@ -161,7 +160,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       payload = <<216, 85, 85, 170, 233, 29, 109, 237>>
 
       expected_descriptor = %PayloadDescriptor{
-        first_octet: 216,
+        first_octet: <<216>>,
         picture_id: 85,
         tid: nil,
         u: nil,
@@ -215,7 +214,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       }
 
       expected_descriptor = %PayloadDescriptor{
-        first_octet: 10,
+        first_octet: <<10>>,
         scalability_structure: expected_ss
       }
 
@@ -269,7 +268,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       expected_rest = <<233, 29, 109, 237>>
 
       expected_descriptor = %PayloadDescriptor{
-        first_octet: 2,
+        first_octet: <<2>>,
         scalability_structure: expected_ss
       }
 
