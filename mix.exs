@@ -48,7 +48,7 @@ defmodule Membrane.RTP.VP9.MixProject do
       {:membrane_element_pcap, github: "membraneframework/membrane-element-pcap", only: :test},
       {:membrane_element_ivf,
        github: "membraneframework/membrane-element-ivf",
-       branch: :"moved-from-vp9-plugin",
+       branch: :"generalized-ivf-element",
        only: :test},
       {:membrane_file_plugin, "~> 0.5.0", only: :test},
       {:membrane_remote_stream_format, "~> 0.1.0"},

@@ -51,7 +51,7 @@ defmodule Membrane.RTP.VP9.DepayloaderWithSessionBinTest do
         children: [
           {{:file_sink, ssrc}, %Membrane.File.Sink{location: result_file}},
           {{:ivf_writter, ssrc},
-           %IVF.VP9{width: video.width, height: video.height, scale: 1, rate: 30}}
+           %IVF{width: video.width, height: video.height, scale: 1, rate: 30}}
         ],
         links: [
           link(:rtp)
