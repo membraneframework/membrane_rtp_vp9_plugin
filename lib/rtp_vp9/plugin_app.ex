@@ -3,7 +3,7 @@ defmodule Membrane.RTP.VP9.Plugin.App do
   use Application
   alias Membrane.RTP.{VP9, PayloadFormat}
 
-  @spec start(any, any) :: none
+  @impl true
   def start(_type, _args) do
     PayloadFormat.register(%PayloadFormat{
       encoding_name: :VP9,
