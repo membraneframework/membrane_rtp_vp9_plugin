@@ -27,7 +27,7 @@ defmodule Membrane.RTP.VP9.DepayloaderTest do
   test "two rtp buffers carrying one vp9 frame" do
     buffer_1 = %Buffer{payload: <<8, 170, 171>>, metadata: %{rtp: %{sequence_number: 14_450}}}
     buffer_2 = %Buffer{payload: <<4, 172, 173>>, metadata: %{rtp: %{sequence_number: 14_451}}}
-    {:ok, depayloader_state} = Depayloader.handle_init()
+    {:ok, depayloader_state} = Depayloader.handle_init([])
 
     assert {{:ok, [redemand: :output]}, depayloader_state} =
              Depayloader.handle_process(:input, buffer_1, nil, depayloader_state)
@@ -59,7 +59,7 @@ defmodule Membrane.RTP.VP9.DepayloaderTest do
   """
   test "one rtp buffer carrying one vp9 frame" do
     buffer = %Buffer{payload: <<12, 170, 171>>, metadata: %{rtp: %{sequence_number: 14_450}}}
-    {:ok, depayloader_state} = Depayloader.handle_init()
+    {:ok, depayloader_state} = Depayloader.handle_init([])
 
     assert {{:ok,
              [
@@ -99,7 +99,7 @@ defmodule Membrane.RTP.VP9.DepayloaderTest do
   test "missing packet" do
     buffer_1 = %Buffer{payload: <<8, 170, 171>>, metadata: %{rtp: %{sequence_number: 14_450}}}
     buffer_2 = %Buffer{payload: <<4, 172, 173>>, metadata: %{rtp: %{sequence_number: 14_452}}}
-    {:ok, depayloader_state} = Depayloader.handle_init()
+    {:ok, depayloader_state} = Depayloader.handle_init([])
 
     assert {{:ok, [redemand: :output]}, depayloader_state} =
              Depayloader.handle_process(:input, buffer_1, nil, depayloader_state)

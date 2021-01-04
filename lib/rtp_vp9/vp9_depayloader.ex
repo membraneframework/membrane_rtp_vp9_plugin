@@ -8,8 +8,9 @@ defmodule Membrane.RTP.VP9.Depayloader do
   use Membrane.Filter
   use Membrane.Log
 
+  alias Membrane.RTP
   alias Membrane.RTP.VP9.Frame
-  alias Membrane.Caps.{RTP, VP9}
+  alias Membrane.Caps.VP9
   alias Membrane.{Buffer, RemoteStream}
   alias Membrane.Event.Discontinuity
 
@@ -24,8 +25,8 @@ defmodule Membrane.RTP.VP9.Depayloader do
     defstruct frame_acc: nil
   end
 
-  @spec handle_init :: {:ok, Membrane.RTP.VP9.Depayloader.State.t()}
-  def handle_init(), do: {:ok, %State{}}
+  @impl true
+  def handle_init(_options), do: {:ok, %State{}}
 
   @impl true
   def handle_caps(:input, _caps, _context, state) do
