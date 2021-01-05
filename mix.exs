@@ -6,7 +6,7 @@ defmodule Membrane.RTP.VP9.MixProject do
 
   def project do
     [
-      app: :membrane_template_plugin,
+      app: :membrane_rtp_vp9_plugin,
       version: @version,
       elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -37,10 +37,22 @@ defmodule Membrane.RTP.VP9.MixProject do
 
   defp deps do
     [
-      {:membrane_core, "~> 0.6.0"},
+      {:membrane_core, "~> 0.6.1", override: true},
       {:ex_doc, "~> 0.22", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0.0", only: :dev, runtime: false},
-      {:credo, "~> 1.4", only: :dev, runtime: false}
+      {:ex_libsrtp, "~> 0.1.0"},
+      {:credo, "~> 1.4", only: :dev, runtime: false},
+      {:membrane_rtp_format, "~> 0.3.0"},
+      {:membrane_rtp_plugin, github: "membraneframework/membrane_rtp_plugin"},
+      {:membrane_vp9_format, github: "membraneframework/membrane_vp9_format"},
+      {:membrane_element_pcap, github: "membraneframework/membrane-element-pcap", only: :test},
+      {:membrane_element_ivf,
+       github: "membraneframework/membrane-element-ivf",
+       branch: :"generalized-ivf-element",
+       only: :test},
+      {:membrane_file_plugin, "~> 0.5.0", only: :test},
+      {:membrane_remote_stream_format, "~> 0.1.0"},
+      {:membrane_caps_rtp, "~> 0.1.0"}
     ]
   end
 
