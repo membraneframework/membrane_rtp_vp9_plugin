@@ -21,6 +21,9 @@ defmodule Membrane.RTP.VP9.Frame do
   def parse(rtp_data, seq_num, acc) do
     with {:ok, {payload_descriptor, payload}} <-
            PayloadDescriptor.parse_payload_descriptor(rtp_data) do
+            IO.inspect("xxxxxxxxxxxxxxxx")
+            IO.inspect(byte_size(payload))
+            IO.inspect(payload_descriptor)
       do_parse(payload_descriptor, payload, seq_num, acc)
     else
       _error -> {:error, :packet_malformed}

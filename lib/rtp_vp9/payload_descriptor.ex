@@ -123,6 +123,77 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
     defstruct [:first_octet, dimensions: [], pg_descriptions: []]
   end
 
+  @spec serialize(__MODULE__.t() | PGDescription.t() | SSDimension.t() | ScalabilityStructure.t()) ::
+          binary()
+  def serialize(%__MODULE__{} = payload_descriptor) do
+    first_octet = payload_descriptor.first_octet
+    <<_ip::2, l::1, _fbevz::5>> = first_octet
+    picture_id =
+      case <<payload_descriptor.picture_id::16>> do
+        <<1::1, _rest::15>> -> <<payload_descriptor.picture_id::16>>
+        <<0::1, _rest::15>> -> <<payload_descriptor.picture_id::8>>
+        _nil -> <<>>
+      end
+
+    tid_u_sid_d = if l == 1, do: <<payload_descriptor.tid::3, payload_descriptor.u::1, payload_descriptor.sid::3, payload_descriptor.d::1>>, else: <<>>
+
+    p_diffs =
+      if payload_descriptor.p_diffs do
+        payload_descriptor.p_diffs |> Enum.reduce(<<>>, &(&2 <> <<&1>>))
+      else
+        <<>>
+      end
+
+    tl0picidx = if payload_descriptor.tl0picidx, do: <<payload_descriptor.tl0picidx>>, else: <<>>
+
+    scalability_structure =
+      if payload_descriptor.scalability_structure,
+        do: serialize(payload_descriptor.scalability_structure),
+        else: <<>>
+
+    first_octet <> picture_id <> tid_u_sid_d <> p_diffs <> tl0picidx <> scalability_structure
+  end
+
+  def serialize(%ScalabilityStructure{} = ss) do
+    first_octet = ss.first_octet
+
+    dimensions =
+      if ss.dimensions do
+        Enum.reduce(ss.dimensions, <<>>, &(&2 <> serialize(&1)))
+      else
+        <<>>
+      end
+
+    {n_g, pg_descriptions} =
+      if ss.pg_descriptions do
+        {<<length(ss.pg_descriptions)>>,
+         Enum.reduce(ss.pg_descriptions, <<>>, &(&2 <> serialize(&1)))}
+      else
+        {<<0>>, <<>>}
+      end
+
+    first_octet <> dimensions <> n_g <> pg_descriptions
+  end
+
+  def serialize(%SSDimension{} = dimension) do
+    <<dimension.width::16, dimension.height::16>>
+  end
+
+  def serialize(%PGDescription{} = pg_description) do
+    tid = if pg_description.tid, do: <<pg_description.tid::3>>, else: <<>>
+    u = if pg_description.u, do: <<pg_description.u::1>>, else: <<>>
+
+    {r, p_diffs} =
+      if pg_description.p_diffs do
+        {<<length(pg_description.p_diffs)::3>>,
+         Enum.reduce(pg_description.p_diffs, <<>>, &(&2 <> <<&1>>))}
+      else
+        {<<0>>, <<>>}
+      end
+
+    tid <> u <> r <> p_diffs
+  end
+
   @spec parse_payload_descriptor(binary()) :: {:error, :malformed_data} | {:ok, {t(), binary()}}
   def parse_payload_descriptor(raw_payload)
 

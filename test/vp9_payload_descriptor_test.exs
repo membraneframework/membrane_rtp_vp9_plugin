@@ -90,6 +90,23 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       assert expected_descriptor == actual_descriptor
       assert expected_rest == rest
     end
+     @doc """
+     Complementary to the test above
+     """
+    test "serializing descriptor with picture id and layer indices" do
+      descriptor = %PayloadDescriptor{
+        first_octet: <<184>>,
+        picture_id: 91,
+        tid: 1,
+        u: 1,
+        d: 0,
+        sid: 2
+      }
+
+      expected_binary = <<184, 91, 52>>
+
+      assert expected_binary = PayloadDescriptor.serialize(descriptor)
+    end
 
     @doc """
          I P L F B E V Z
