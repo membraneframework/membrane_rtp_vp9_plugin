@@ -127,27 +127,34 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
           binary()
   def serialize(%__MODULE__{} = payload_descriptor) do
     first_octet = payload_descriptor.first_octet
-    <<_ip::2, l::1, _fbevz::5>> = first_octet
+    <<i::1, p::1, l::1, f::1, _be::2, v::1, _z::1>> = first_octet
+
     picture_id =
-      case <<payload_descriptor.picture_id::16>> do
-        <<1::1, _rest::15>> -> <<payload_descriptor.picture_id::16>>
-        <<0::1, _rest::15>> -> <<payload_descriptor.picture_id::8>>
-        _nil -> <<>>
-      end
-
-    tid_u_sid_d = if l == 1, do: <<payload_descriptor.tid::3, payload_descriptor.u::1, payload_descriptor.sid::3, payload_descriptor.d::1>>, else: <<>>
-
-    p_diffs =
-      if payload_descriptor.p_diffs do
-        payload_descriptor.p_diffs |> Enum.reduce(<<>>, &(&2 <> <<&1>>))
+      if i == 1 do
+        case <<payload_descriptor.picture_id::16>> do
+          <<0::1, _rest::15>> -> <<payload_descriptor.picture_id::8>>
+          <<1::1, _rest::15>> -> <<payload_descriptor.picture_id::16>>
+        end
       else
         <<>>
       end
 
+    tid_u_sid_d =
+      if l == 1,
+        do:
+          <<payload_descriptor.tid::3, payload_descriptor.u::1, payload_descriptor.sid::3,
+            payload_descriptor.d::1>>,
+        else: <<>>
+
+    p_diffs =
+      if p == 1 and f == 1,
+        do: payload_descriptor.p_diffs |> Enum.reduce(<<>>, &(&2 <> <<&1>>)),
+        else: <<>>
+
     tl0picidx = if payload_descriptor.tl0picidx, do: <<payload_descriptor.tl0picidx>>, else: <<>>
 
     scalability_structure =
-      if payload_descriptor.scalability_structure,
+      if v == 1,
         do: serialize(payload_descriptor.scalability_structure),
         else: <<>>
 
@@ -157,12 +164,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   def serialize(%ScalabilityStructure{} = ss) do
     first_octet = ss.first_octet
 
-    dimensions =
-      if ss.dimensions do
-        Enum.reduce(ss.dimensions, <<>>, &(&2 <> serialize(&1)))
-      else
-        <<>>
-      end
+    dimensions = Enum.reduce(ss.dimensions, <<>>, &(&2 <> serialize(&1)))
 
     {n_g, pg_descriptions} =
       if ss.pg_descriptions do
@@ -180,18 +182,15 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   end
 
   def serialize(%PGDescription{} = pg_description) do
-    tid = if pg_description.tid, do: <<pg_description.tid::3>>, else: <<>>
-    u = if pg_description.u, do: <<pg_description.u::1>>, else: <<>>
-
     {r, p_diffs} =
       if pg_description.p_diffs do
-        {<<length(pg_description.p_diffs)::3>>,
+        {length(pg_description.p_diffs),
          Enum.reduce(pg_description.p_diffs, <<>>, &(&2 <> <<&1>>))}
       else
-        {<<0>>, <<>>}
+        {0, <<>>}
       end
 
-    tid <> u <> r <> p_diffs
+    <<pg_description.tid::3, pg_description.u::1, r::2, 0::2>> <> p_diffs
   end
 
   @spec parse_payload_descriptor(binary()) :: {:error, :malformed_data} | {:ok, {t(), binary()}}

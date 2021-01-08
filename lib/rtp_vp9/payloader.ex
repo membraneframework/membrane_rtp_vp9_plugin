@@ -56,6 +56,7 @@ defmodule Membrane.RTP.VP9.Payloader do
     %Buffer{payload: payload} = buffer
 
     chunks_count = ceil(byte_size(payload) / @max_payload_size)
+
     1..chunks_count
     |> Enum.map_reduce(payload, fn _i, acc ->
       with <<chunk::binary-size(@max_payload_size), rest::binary()>> <- acc do
