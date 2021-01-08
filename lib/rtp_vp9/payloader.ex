@@ -8,9 +8,9 @@ defmodule Membrane.RTP.VP9.Payloader do
 
   use Membrane.Filter
 
+  alias Membrane.Caps.VP9
   alias Membrane.{Buffer, RemoteStream, RTP}
-
-  @max_payload_size 1459
+  alias Membrane.RTP.VP9.PayloadDescriptor
 
   def_options max_payload_size: [
                 spec: non_neg_integer(),
@@ -28,13 +28,24 @@ defmodule Membrane.RTP.VP9.Payloader do
     caps: {RemoteStream, content_format: VP9, type: :packetized},
     demand_unit: :buffers
 
+  defmodule State do
+    @moduledoc false
+    defstruct [
+      :max_payload_size
+    ]
+  end
+
   @impl true
-  def handle_init(_options), do: {:ok, %{}}
+  def handle_init(options), do: {:ok, Map.merge(%State{}, Map.from_struct(options))}
 
   @impl true
   def handle_caps(:input, _caps, _context, state) do
-    caps = RTP
-    {{:ok, caps: {:output, caps}}, state}
+    {:ok, state}
+  end
+
+  @impl true
+  def handle_prepared_to_playing(_ctx, state) do
+    {{:ok, caps: {:output, %RTP{}}}, state}
   end
 
   @impl true
@@ -45,25 +56,70 @@ defmodule Membrane.RTP.VP9.Payloader do
   @impl true
   def handle_process(
         :input,
-        buffer,
+        %Buffer{metadata: metadata, payload: payload},
         _ctx,
-        _state
+        state
       ) do
-    {{:ok, [buffer: split_into_buffers(buffer), redemand: :output]}, %{}}
+    buffers =
+      payload
+      |> Bunch.Binary.chunk_every_rem(state.max_payload_size)
+      |> add_descriptors()
+      |> Enum.map(&%Buffer{metadata: metadata, payload: &1})
+
+    {{:ok, [buffer: {:output, buffers}, redemand: :output]}, state}
   end
 
-  defp split_into_buffers(buffer) do
-    %Buffer{payload: payload} = buffer
+  defp add_descriptors({[], chunk}) do
+    begin_end_descriptor =
+      %PayloadDescriptor{first_octet: <<12>>} |> PayloadDescriptor.serialize()
 
-    chunks_count = ceil(byte_size(payload) / @max_payload_size)
+    [begin_end_descriptor <> chunk]
+  end
 
-    1..chunks_count
-    |> Enum.map_reduce(payload, fn _i, acc ->
-      with <<chunk::binary-size(@max_payload_size), rest::binary()>> <- acc do
-        {%Buffer{buffer | payload: chunk}, rest}
-      else
-        _error -> {%Buffer{buffer | payload: acc}, <<>>}
-      end
-    end)
+  defp add_descriptors({[chunk], <<>>}) do
+    begin_end_descriptor =
+      %PayloadDescriptor{first_octet: <<12>>} |> PayloadDescriptor.serialize()
+
+    [begin_end_descriptor <> chunk]
+  end
+
+  defp add_descriptors({chunks, <<>>}) do
+    begin_descriptor = %PayloadDescriptor{first_octet: <<8>>} |> PayloadDescriptor.serialize()
+    middle_descriptor = %PayloadDescriptor{first_octet: <<0>>} |> PayloadDescriptor.serialize()
+    end_descriptor = %PayloadDescriptor{first_octet: <<4>>} |> PayloadDescriptor.serialize()
+    chunks_count = length(chunks)
+
+    {chunks, _i} =
+      chunks
+      |> Enum.map_reduce(1, fn element, i ->
+        case i do
+          1 ->
+            {begin_descriptor <> element, i + 1}
+
+          ^chunks_count ->
+            {end_descriptor <> element, i + 1}
+
+          _middle ->
+            {middle_descriptor <> element, i + 1}
+        end
+      end)
+
+    chunks
+  end
+
+  defp add_descriptors({chunks, last_chunk}) do
+    begin_descriptor = %PayloadDescriptor{first_octet: <<8>>} |> PayloadDescriptor.serialize()
+    middle_descriptor = %PayloadDescriptor{first_octet: <<0>>} |> PayloadDescriptor.serialize()
+    end_descriptor = %PayloadDescriptor{first_octet: <<4>>} |> PayloadDescriptor.serialize()
+
+    [first_chunk | chunks] = chunks
+
+    chunks =
+      chunks
+      |> Enum.reduce([end_descriptor <> last_chunk], fn chunk, acc ->
+        [middle_descriptor <> chunk | acc]
+      end)
+
+    [begin_descriptor <> first_chunk | chunks]
   end
 end
