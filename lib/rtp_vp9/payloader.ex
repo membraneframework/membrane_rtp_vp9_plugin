@@ -60,11 +60,20 @@ defmodule Membrane.RTP.VP9.Payloader do
         _ctx,
         state
       ) do
-    buffers =
+    chunk_count = ceil(byte_size(payload) / state.max_payload_size)
+    max_chunk_size = round(byte_size(payload) / chunk_count)
+        IO.inspect(chunk_count, label: "###")
+        IO.inspect(max_chunk_size, label: "$$$")
+    {buffers, _i} =
       payload
-      |> Bunch.Binary.chunk_every_rem(state.max_payload_size)
+      |> Bunch.Binary.chunk_every_rem(max_chunk_size)
       |> add_descriptors()
-      |> Enum.map(&%Buffer{metadata: metadata, payload: &1})
+      |> Enum.map_reduce(1, fn chunk, i ->
+        {%Buffer{
+           metadata: Bunch.Struct.put_in(metadata, [:rtp], %{marker: i == chunk_count}),
+           payload: chunk
+         }, i + 1}
+      end)
 
     {{:ok, [buffer: {:output, buffers}, redemand: :output]}, state}
   end
@@ -84,6 +93,8 @@ defmodule Membrane.RTP.VP9.Payloader do
   end
 
   defp add_descriptors({chunks, <<>>}) do
+    IO.inspect("Im here")
+    IO.inspect(chunks)
     begin_descriptor = %PayloadDescriptor{first_octet: <<8>>} |> PayloadDescriptor.serialize()
     middle_descriptor = %PayloadDescriptor{first_octet: <<0>>} |> PayloadDescriptor.serialize()
     end_descriptor = %PayloadDescriptor{first_octet: <<4>>} |> PayloadDescriptor.serialize()

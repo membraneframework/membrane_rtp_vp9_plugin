@@ -49,15 +49,15 @@ defmodule Membrane.RTP.VP9.PayloaderTest do
                  {:output,
                   [
                     %Buffer{
-                      metadata: %{},
+                      metadata: %{rtp: %{marker: false}},
                       payload: begin_descriptor <> <<1, 1, 1>>
                     },
                     %Buffer{
-                      metadata: %{},
+                      metadata: %{rtp: %{marker: false}},
                       payload: middle_descriptor <> <<1, 1, 1>>
                     },
                     %Buffer{
-                      metadata: %{},
+                      metadata: %{rtp: %{marker: true}},
                       payload: end_descriptor <> <<1, 1, 1>>
                     }
                   ]},
@@ -68,7 +68,7 @@ defmodule Membrane.RTP.VP9.PayloaderTest do
   end
 
   test "two complete chunks one incomplete" do
-    input_payload = <<1, 1, 1, 1, 1, 1, 1, 1>>
+    input_payload = <<1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>>
     input_buffer = %Buffer{payload: input_payload}
 
     begin_descriptor = %PayloadDescriptor{first_octet: <<8>>} |> PayloadDescriptor.serialize()
@@ -83,15 +83,19 @@ defmodule Membrane.RTP.VP9.PayloaderTest do
                  {:output,
                   [
                     %Buffer{
-                      metadata: %{},
-                      payload: begin_descriptor <> <<1, 1, 1>>
+                      metadata: %{rtp: %{marker: false}},
+                      payload: begin_descriptor <> << 1, 1, 1>>
                     },
                     %Buffer{
-                      metadata: %{},
+                      metadata: %{rtp: %{marker: false}},
                       payload: middle_descriptor <> <<1, 1, 1>>
                     },
                     %Buffer{
-                      metadata: %{},
+                      metadata: %{rtp: %{marker: false}},
+                      payload: middle_descriptor <> <<1, 1, 1>>
+                    },
+                    %Buffer{
+                      metadata: %{rtp: %{marker: true}},
                       payload: end_descriptor <> <<1, 1>>
                     }
                   ]},
