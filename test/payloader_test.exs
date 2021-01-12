@@ -11,7 +11,7 @@ defmodule Membrane.RTP.VP9.PayloaderTest do
     input_buffer = %Buffer{payload: input_payload}
 
     expected_payload_descriptor =
-      %PayloadDescriptor{first_octet: <<12>>} |> PayloadDescriptor.serialize()
+      %PayloadDescriptor{first_octet: <<13>>} |> PayloadDescriptor.serialize()
 
     expected_output_payload = expected_payload_descriptor <> input_payload
 
@@ -37,9 +37,9 @@ defmodule Membrane.RTP.VP9.PayloaderTest do
     input_payload = <<1, 1, 1, 1, 1, 1, 1, 1, 1>>
     input_buffer = %Buffer{payload: input_payload}
 
-    begin_descriptor = %PayloadDescriptor{first_octet: <<8>>} |> PayloadDescriptor.serialize()
-    middle_descriptor = %PayloadDescriptor{first_octet: <<0>>} |> PayloadDescriptor.serialize()
-    end_descriptor = %PayloadDescriptor{first_octet: <<4>>} |> PayloadDescriptor.serialize()
+    begin_descriptor = %PayloadDescriptor{first_octet: <<9>>} |> PayloadDescriptor.serialize()
+    middle_descriptor = %PayloadDescriptor{first_octet: <<1>>} |> PayloadDescriptor.serialize()
+    end_descriptor = %PayloadDescriptor{first_octet: <<5>>} |> PayloadDescriptor.serialize()
 
     {:ok, payloader_state} = Payloader.handle_init(%Payloader{max_payload_size: 3})
 
@@ -71,9 +71,9 @@ defmodule Membrane.RTP.VP9.PayloaderTest do
     input_payload = <<1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>>
     input_buffer = %Buffer{payload: input_payload}
 
-    begin_descriptor = %PayloadDescriptor{first_octet: <<8>>} |> PayloadDescriptor.serialize()
-    middle_descriptor = %PayloadDescriptor{first_octet: <<0>>} |> PayloadDescriptor.serialize()
-    end_descriptor = %PayloadDescriptor{first_octet: <<4>>} |> PayloadDescriptor.serialize()
+    begin_descriptor = %PayloadDescriptor{first_octet: <<9>>} |> PayloadDescriptor.serialize()
+    middle_descriptor = %PayloadDescriptor{first_octet: <<1>>} |> PayloadDescriptor.serialize()
+    end_descriptor = %PayloadDescriptor{first_octet: <<5>>} |> PayloadDescriptor.serialize()
 
     {:ok, payloader_state} = Payloader.handle_init(%Payloader{max_payload_size: 3})
 

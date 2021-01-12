@@ -79,22 +79,22 @@ defmodule Membrane.RTP.VP9.Payloader do
 
   defp add_descriptors({[], chunk}) do
     begin_end_descriptor =
-      %PayloadDescriptor{first_octet: <<12>>} |> PayloadDescriptor.serialize()
+      %PayloadDescriptor{first_octet: <<13>>} |> PayloadDescriptor.serialize()
 
     [begin_end_descriptor <> chunk]
   end
 
   defp add_descriptors({[chunk], <<>>}) do
     begin_end_descriptor =
-      %PayloadDescriptor{first_octet: <<12>>} |> PayloadDescriptor.serialize()
+      %PayloadDescriptor{first_octet: <<13>>} |> PayloadDescriptor.serialize()
 
     [begin_end_descriptor <> chunk]
   end
 
   defp add_descriptors({chunks, <<>>}) do
-    begin_descriptor = %PayloadDescriptor{first_octet: <<8>>} |> PayloadDescriptor.serialize()
-    middle_descriptor = %PayloadDescriptor{first_octet: <<0>>} |> PayloadDescriptor.serialize()
-    end_descriptor = %PayloadDescriptor{first_octet: <<4>>} |> PayloadDescriptor.serialize()
+    begin_descriptor = %PayloadDescriptor{first_octet: <<9>>} |> PayloadDescriptor.serialize()
+    middle_descriptor = %PayloadDescriptor{first_octet: <<1>>} |> PayloadDescriptor.serialize()
+    end_descriptor = %PayloadDescriptor{first_octet: <<5>>} |> PayloadDescriptor.serialize()
     chunks_count = length(chunks)
 
     {chunks, _i} =
@@ -116,9 +116,9 @@ defmodule Membrane.RTP.VP9.Payloader do
   end
 
   defp add_descriptors({chunks, last_chunk}) do
-    begin_descriptor = %PayloadDescriptor{first_octet: <<8>>} |> PayloadDescriptor.serialize()
-    middle_descriptor = %PayloadDescriptor{first_octet: <<0>>} |> PayloadDescriptor.serialize()
-    end_descriptor = %PayloadDescriptor{first_octet: <<4>>} |> PayloadDescriptor.serialize()
+    begin_descriptor = %PayloadDescriptor{first_octet: <<9>>} |> PayloadDescriptor.serialize()
+    middle_descriptor = %PayloadDescriptor{first_octet: <<1>>} |> PayloadDescriptor.serialize()
+    end_descriptor = %PayloadDescriptor{first_octet: <<5>>} |> PayloadDescriptor.serialize()
 
     [first_chunk | chunks] = chunks
 
