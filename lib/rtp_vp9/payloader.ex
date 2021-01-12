@@ -61,9 +61,8 @@ defmodule Membrane.RTP.VP9.Payloader do
         state
       ) do
     chunk_count = ceil(byte_size(payload) / state.max_payload_size)
-    max_chunk_size = round(byte_size(payload) / chunk_count)
-        IO.inspect(chunk_count, label: "###")
-        IO.inspect(max_chunk_size, label: "$$$")
+    max_chunk_size = ceil(byte_size(payload) / chunk_count)
+
     {buffers, _i} =
       payload
       |> Bunch.Binary.chunk_every_rem(max_chunk_size)
@@ -93,8 +92,6 @@ defmodule Membrane.RTP.VP9.Payloader do
   end
 
   defp add_descriptors({chunks, <<>>}) do
-    IO.inspect("Im here")
-    IO.inspect(chunks)
     begin_descriptor = %PayloadDescriptor{first_octet: <<8>>} |> PayloadDescriptor.serialize()
     middle_descriptor = %PayloadDescriptor{first_octet: <<0>>} |> PayloadDescriptor.serialize()
     end_descriptor = %PayloadDescriptor{first_octet: <<4>>} |> PayloadDescriptor.serialize()

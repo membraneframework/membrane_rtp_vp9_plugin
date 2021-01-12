@@ -23,7 +23,7 @@ defmodule Membrane.RTP.VP9.PayloaderTest do
                  {:output,
                   [
                     %Buffer{
-                      metadata: %{},
+                      metadata: %{rtp: %{marker: true}},
                       payload: expected_output_payload
                     }
                   ]},
@@ -84,7 +84,7 @@ defmodule Membrane.RTP.VP9.PayloaderTest do
                   [
                     %Buffer{
                       metadata: %{rtp: %{marker: false}},
-                      payload: begin_descriptor <> << 1, 1, 1>>
+                      payload: begin_descriptor <> <<1, 1, 1>>
                     },
                     %Buffer{
                       metadata: %{rtp: %{marker: false}},
