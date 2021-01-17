@@ -124,10 +124,10 @@ defmodule Membrane.RTP.VP9.Payloader do
 
     chunks =
       chunks
-      |> Enum.reduce([end_descriptor <> last_chunk], fn chunk, acc ->
+      |> Enum.reduce([], fn chunk, acc ->
         [middle_descriptor <> chunk | acc]
       end)
-
-    [begin_descriptor <> first_chunk | chunks]
+      chunks = [end_descriptor <> last_chunk | chunks]
+    [begin_descriptor <> first_chunk | Enum.reverse(chunks)]
   end
 end
