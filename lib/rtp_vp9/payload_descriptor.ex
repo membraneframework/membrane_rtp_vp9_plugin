@@ -82,7 +82,9 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   ]
 
   defmodule PGDescription do
-    @moduledoc false
+    @moduledoc """
+    Struct representing picture group description. Present if G bit is set in first octet of scalability structure.
+    """
 
     alias Membrane.RTP.VP9.PayloadDescriptor
 
@@ -96,7 +98,9 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   end
 
   defmodule SSDimension do
-    @moduledoc false
+    @moduledoc """
+    Struct representing spatial layer frame resolution. Present if Y bit is set in first octet of scalability structure.
+    """
 
     @type t :: %__MODULE__{
             width: 0..65_535,
@@ -108,7 +112,9 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   end
 
   defmodule ScalabilityStructure do
-    @moduledoc false
+    @moduledoc """
+    A struct representing VP9 scalability structure.
+    """
 
     alias Membrane.RTP.VP9.PayloadDescriptor
     alias Membrane.RTP.VP9.PayloadDescriptor.{SSDimension, PGDescription}
