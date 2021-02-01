@@ -10,7 +10,12 @@ defmodule Membrane.RTP.VP9.Payloader do
 
   alias Membrane.Caps.VP9
   alias Membrane.{Buffer, RemoteStream, RTP}
-  alias Membrane.RTP.VP9.PayloadDescriptor
+
+  # predefines simple payload descriptors for RTP packages after fragmentation
+  @first_fragment_descriptor <<8>>
+  @middle_fragment_descriptor <<0>>
+  @last_fragment_descriptor <<4>>
+  @single_fragment_frame_descriptor <<12>>
 
   def_options max_payload_size: [
                 spec: non_neg_integer(),
@@ -19,6 +24,14 @@ defmodule Membrane.RTP.VP9.Payloader do
                 Maximal size of outputted payloads in bytes. RTP packet will contain VP9 payload descriptor which can have around 30B.
                 The resulting RTP packet will also RTP header (min 12B). After adding UDP header (8B), IPv4 header(min 20B, max 60B)
                 everything should fit in standard MTU size (1500B)
+                """
+              ],
+              payload_descriptor_type: [
+                spec: :simple,
+                default: :simple,
+                description: """
+                When set to :simple payloader will generate only minimal payload descriptors required for fragmentation.
+                More complex payload descriptors are not yet supported so this option should be left as default.
                 """
               ]
 
@@ -77,24 +90,11 @@ defmodule Membrane.RTP.VP9.Payloader do
     {{:ok, [buffer: {:output, buffers}, redemand: :output]}, state}
   end
 
-  defp add_descriptors({[], chunk}) do
-    begin_end_descriptor =
-      %PayloadDescriptor{first_octet: <<13>>} |> PayloadDescriptor.serialize()
+  defp add_descriptors({[], chunk}), do: [@single_fragment_frame_descriptor <> chunk]
 
-    [begin_end_descriptor <> chunk]
-  end
-
-  defp add_descriptors({[chunk], <<>>}) do
-    begin_end_descriptor =
-      %PayloadDescriptor{first_octet: <<13>>} |> PayloadDescriptor.serialize()
-
-    [begin_end_descriptor <> chunk]
-  end
+  defp add_descriptors({[chunk], <<>>}), do: [@single_fragment_frame_descriptor <> chunk]
 
   defp add_descriptors({chunks, <<>>}) do
-    begin_descriptor = %PayloadDescriptor{first_octet: <<9>>} |> PayloadDescriptor.serialize()
-    middle_descriptor = %PayloadDescriptor{first_octet: <<1>>} |> PayloadDescriptor.serialize()
-    end_descriptor = %PayloadDescriptor{first_octet: <<5>>} |> PayloadDescriptor.serialize()
     chunks_count = length(chunks)
 
     {chunks, _i} =
@@ -102,13 +102,13 @@ defmodule Membrane.RTP.VP9.Payloader do
       |> Enum.map_reduce(1, fn element, i ->
         case i do
           1 ->
-            {begin_descriptor <> element, i + 1}
+            {@first_fragment_descriptor <> element, i + 1}
 
           ^chunks_count ->
-            {end_descriptor <> element, i + 1}
+            {@last_fragment_descriptor <> element, i + 1}
 
           _middle ->
-            {middle_descriptor <> element, i + 1}
+            {@middle_fragment_descriptor <> element, i + 1}
         end
       end)
 
@@ -116,18 +116,15 @@ defmodule Membrane.RTP.VP9.Payloader do
   end
 
   defp add_descriptors({chunks, last_chunk}) do
-    begin_descriptor = %PayloadDescriptor{first_octet: <<9>>} |> PayloadDescriptor.serialize()
-    middle_descriptor = %PayloadDescriptor{first_octet: <<1>>} |> PayloadDescriptor.serialize()
-    end_descriptor = %PayloadDescriptor{first_octet: <<5>>} |> PayloadDescriptor.serialize()
-
     [first_chunk | chunks] = chunks
 
     chunks =
       chunks
       |> Enum.reduce([], fn chunk, acc ->
-        [middle_descriptor <> chunk | acc]
+        [@middle_fragment_descriptor <> chunk | acc]
       end)
-      chunks = [end_descriptor <> last_chunk | chunks]
-    [begin_descriptor <> first_chunk | Enum.reverse(chunks)]
+
+    chunks = [@last_fragment_descriptor <> last_chunk | chunks]
+    [@first_fragment_descriptor <> first_chunk | Enum.reverse(chunks)]
   end
 end
