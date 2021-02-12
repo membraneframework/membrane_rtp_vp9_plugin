@@ -69,37 +69,39 @@ defmodule Membrane.RTP.VP9.Payloader do
   @impl true
   def handle_process(
         :input,
-        %Buffer{metadata: metadata, payload: payload},
+        buffer,
         _ctx,
         state
       ) do
+    %Buffer{metadata: metadata, payload: payload} = buffer
     chunk_count = ceil(byte_size(payload) / state.max_payload_size)
     max_chunk_size = ceil(byte_size(payload) / chunk_count)
 
-    {buffers, _i} =
+    buffers =
       payload
       |> Bunch.Binary.chunk_every_rem(max_chunk_size)
       |> add_descriptors()
-      |> Enum.map_reduce(1, fn chunk, i ->
-        {%Buffer{
-           metadata: Bunch.Struct.put_in(metadata, [:rtp], %{marker: i == chunk_count}),
-           payload: chunk
-         }, i + 1}
-      end)
+      |> Enum.map(
+        &%Buffer{
+          metadata: Bunch.Struct.put_in(metadata, [:rtp], %{marker: false}),
+          payload: &1
+        }
+      )
+      |> List.update_at(-1, &Bunch.Struct.put_in(&1, [:metadata, :rtp, :marker], true))
 
     {{:ok, [buffer: {:output, buffers}, redemand: :output]}, state}
   end
 
-  defp add_descriptors({[], chunk}), do: [@single_fragment_frame_descriptor <> chunk]
-
   defp add_descriptors({[chunk], <<>>}), do: [@single_fragment_frame_descriptor <> chunk]
 
-  defp add_descriptors({chunks, <<>>}) do
+  defp add_descriptors({chunks, last_chunk}) do
+    chunks = if byte_size(last_chunk) > 0, do: chunks ++ [last_chunk], else: chunks
     chunks_count = length(chunks)
 
-    {chunks, _i} =
-      chunks
-      |> Enum.map_reduce(1, fn element, i ->
+    chunks
+    |> Enum.map_reduce(
+      1,
+      fn element, i ->
         case i do
           1 ->
             {@first_fragment_descriptor <> element, i + 1}
@@ -110,21 +112,8 @@ defmodule Membrane.RTP.VP9.Payloader do
           _middle ->
             {@middle_fragment_descriptor <> element, i + 1}
         end
-      end)
-
-    chunks
-  end
-
-  defp add_descriptors({chunks, last_chunk}) do
-    [first_chunk | chunks] = chunks
-
-    chunks =
-      chunks
-      |> Enum.reduce([], fn chunk, acc ->
-        [@middle_fragment_descriptor <> chunk | acc]
-      end)
-
-    chunks = [@last_fragment_descriptor <> last_chunk | chunks]
-    [@first_fragment_descriptor <> first_chunk | Enum.reverse(chunks)]
+      end
+    )
+    |> elem(0)
   end
 end
