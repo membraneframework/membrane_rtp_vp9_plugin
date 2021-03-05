@@ -67,12 +67,7 @@ defmodule Membrane.RTP.VP9.Payloader do
   end
 
   @impl true
-  def handle_process(
-        :input,
-        buffer,
-        _ctx,
-        state
-      ) do
+  def handle_process(:input, buffer, _ctx, state) do
     %Buffer{metadata: metadata, payload: payload} = buffer
     chunk_count = ceil(byte_size(payload) / state.max_payload_size)
     max_chunk_size = ceil(byte_size(payload) / chunk_count)

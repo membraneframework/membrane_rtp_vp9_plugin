@@ -154,7 +154,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
 
     p_diffs =
       if p == 1 and f == 1,
-        do: payload_descriptor.p_diffs |> Enum.map_join(<<>>, &<<&1>>),
+        do: payload_descriptor.p_diffs |> Enum.map_join(&<<&1>>),
         else: <<>>
 
     tl0picidx = if payload_descriptor.tl0picidx, do: <<payload_descriptor.tl0picidx>>, else: <<>>
@@ -170,13 +170,13 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   def serialize(%ScalabilityStructure{} = ss) do
     first_octet = ss.first_octet
 
-    dimensions = ss.dimensions |> Enum.map_join("", &serialize(&1))
+    dimensions = ss.dimensions |> Enum.map_join(&serialize(&1))
 
-    n_g = length(ss.pg_descriptions)
+    n_g = <<length(ss.pg_descriptions)>>
 
-    pg_descriptions = ss.pg_descriptions |> Enum.map_join("", &serialize(&1))
+    pg_descriptions = ss.pg_descriptions |> Enum.map_join(&serialize(&1))
 
-    first_octet <> dimensions <> <<n_g>> <> pg_descriptions
+    first_octet <> dimensions <> n_g <> pg_descriptions
   end
 
   def serialize(%SSDimension{} = dimension) do
@@ -185,7 +185,7 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
 
   def serialize(%PGDescription{} = pg_description) do
     r = length(pg_description.p_diffs)
-    p_diffs = pg_description.p_diffs |> Enum.map_join("", &<<&1>>)
+    p_diffs = pg_description.p_diffs |> Enum.map_join(&<<&1>>)
 
     <<pg_description.tid::3, pg_description.u::1, r::2, 0::2>> <> p_diffs
   end
