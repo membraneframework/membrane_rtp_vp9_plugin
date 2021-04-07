@@ -8,7 +8,8 @@ defmodule Membrane.RTP.VP9.Plugin.App do
     PayloadFormat.register(%PayloadFormat{
       encoding_name: :VP9,
       payload_type: 98,
-      depayloader: VP9.Depayloader
+      depayloader: VP9.Depayloader,
+      payloader: VP9.Payloader
     })
 
     PayloadFormat.register_payload_type_mapping(98, :VP9, 90_000)

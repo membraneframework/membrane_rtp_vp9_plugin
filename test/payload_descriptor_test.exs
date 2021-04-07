@@ -92,6 +92,24 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
     end
 
     @doc """
+    Complementary to the test above
+    """
+    test "serializing descriptor with picture id and layer indices" do
+      descriptor = %PayloadDescriptor{
+        first_octet: <<184>>,
+        picture_id: 91,
+        tid: 1,
+        u: 1,
+        d: 0,
+        sid: 2
+      }
+
+      expected_binary = <<184, 91, 52>>
+
+      assert expected_binary = PayloadDescriptor.serialize(descriptor)
+    end
+
+    @doc """
          I P L F B E V Z
         +-+-+-+-+-+-+-+-+
         |0|0|1|1|1|0|0|0| (FIRST OCTET) Note: I = 0 and F = 1 which is not allowed
@@ -143,6 +161,21 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       assert expected_rest == rest
     end
 
+    test "serializing descriptor with extended picture id, layer indices" do
+      descriptor = %PayloadDescriptor{
+        first_octet: <<184>>,
+        picture_id: 56_319,
+        tid: 1,
+        u: 1,
+        d: 0,
+        sid: 2
+      }
+
+      expected_binary = <<184, 219, 255, 52>>
+
+      assert expected_binary = PayloadDescriptor.serialize(descriptor)
+    end
+
     @doc """
          I P L F B E V Z
         +-+-+-+-+-+-+-+-+
@@ -178,6 +211,24 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
 
       assert expected_descriptor == actual_descriptor
       assert expected_rest == rest
+    end
+
+    test "serializing descriptor with picture id and two p_diffs" do
+      descriptor = %PayloadDescriptor{
+        first_octet: <<216>>,
+        picture_id: 85,
+        tid: nil,
+        u: nil,
+        d: nil,
+        sid: nil,
+        p_diffs: [85, 170],
+        tl0picidx: nil,
+        scalability_structure: nil
+      }
+
+      expected_binary = <<216, 85, 85, 170>>
+
+      assert expected_binary = PayloadDescriptor.serialize(descriptor)
     end
 
     @doc """
@@ -225,6 +276,24 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
 
       assert expected_descriptor == actual_descriptor
       assert expected_rest == rest
+    end
+
+    test "serialize descriptor with only scalability structure" do
+      scalability_structure = %ScalabilityStructure{
+        first_octet: <<48>>,
+        dimensions: [
+          %SSDimension{width: 21_845, height: 21_845},
+          %SSDimension{width: 21_845, height: 21_845}
+        ]
+      }
+
+      descriptor = %PayloadDescriptor{
+        first_octet: <<10>>,
+        scalability_structure: scalability_structure
+      }
+
+      expected_binary = <<10, 48, 85, 85, 85, 85, 85, 85, 85, 85>>
+      assert expected_binary = PayloadDescriptor.serialize(descriptor)
     end
 
     @doc """
@@ -278,5 +347,32 @@ defmodule Membrane.RTP.VP9.PayloadDescriptorTest do
       assert expected_descriptor == actual_descriptor
       assert expected_rest == rest
     end
+  end
+
+  test "serializing descriptor with scalability structure and p_diffs" do
+    scalability_structure = %ScalabilityStructure{
+      first_octet: <<8>>,
+      pg_descriptions: [
+        %PGDescription{
+          tid: 0,
+          u: 0,
+          p_diffs: [170, 170]
+        },
+        %PGDescription{
+          tid: 1,
+          u: 1,
+          p_diffs: [85]
+        }
+      ]
+    }
+
+    descriptor = %PayloadDescriptor{
+      first_octet: <<2>>,
+      scalability_structure: scalability_structure
+    }
+
+    expected_binary = <<2, 8, 2, 8, 170, 170, 52, 85>>
+
+    assert expected_binary = PayloadDescriptor.serialize(descriptor)
   end
 end

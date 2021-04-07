@@ -9,10 +9,10 @@ defmodule Membrane.RTP.VP9.DepayloaderWithSessionBinTest do
 
   @results_dir "./test/results"
   @ivf_result_file @results_dir <> "/result.ivf"
-  @ivf_reference_file "./test/fixtures/vp9_sample.ivf"
+  @ivf_reference_file "./test/fixtures/input_vp9.ivf"
 
   @rtp_input %{
-    pcap: "test/fixtures/vp9_sample.pcap",
+    pcap: "test/fixtures/input_vp9.pcap",
     video: %{ssrc: 119_745_458, frames_n: 300, width: 1080, height: 720}
   }
 
@@ -51,7 +51,7 @@ defmodule Membrane.RTP.VP9.DepayloaderWithSessionBinTest do
         children: [
           {{:file_sink, ssrc}, %Membrane.File.Sink{location: result_file}},
           {{:ivf_writter, ssrc},
-           %IVF{width: video.width, height: video.height, scale: 1, rate: 30}}
+           %IVF.Serializer{width: video.width, height: video.height, scale: 1, rate: 30}}
         ],
         links: [
           link(:rtp)

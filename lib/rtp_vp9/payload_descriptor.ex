@@ -82,7 +82,9 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   ]
 
   defmodule PGDescription do
-    @moduledoc false
+    @moduledoc """
+    Struct representing picture group description. Present if G bit is set in first octet of scalability structure.
+    """
 
     alias Membrane.RTP.VP9.PayloadDescriptor
 
@@ -96,7 +98,9 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   end
 
   defmodule SSDimension do
-    @moduledoc false
+    @moduledoc """
+    Struct representing spatial layer frame resolution. Present if Y bit is set in first octet of scalability structure.
+    """
 
     @type t :: %__MODULE__{
             width: 0..65_535,
@@ -108,7 +112,9 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
   end
 
   defmodule ScalabilityStructure do
-    @moduledoc false
+    @moduledoc """
+    A struct representing VP9 scalability structure.
+    """
 
     alias Membrane.RTP.VP9.PayloadDescriptor
     alias Membrane.RTP.VP9.PayloadDescriptor.{SSDimension, PGDescription}
@@ -121,6 +127,67 @@ defmodule Membrane.RTP.VP9.PayloadDescriptor do
 
     @enforce_keys [:first_octet]
     defstruct [:first_octet, dimensions: [], pg_descriptions: []]
+  end
+
+  @spec serialize(__MODULE__.t() | PGDescription.t() | SSDimension.t() | ScalabilityStructure.t()) ::
+          binary()
+  def serialize(%__MODULE__{} = payload_descriptor) do
+    first_octet = payload_descriptor.first_octet
+    <<i::1, p::1, l::1, f::1, _be::2, v::1, _z::1>> = first_octet
+
+    picture_id =
+      if i == 1 do
+        case <<payload_descriptor.picture_id::16>> do
+          <<0::1, _rest::15>> -> <<payload_descriptor.picture_id::8>>
+          <<1::1, _rest::15>> -> <<payload_descriptor.picture_id::16>>
+        end
+      else
+        <<>>
+      end
+
+    tid_u_sid_d =
+      if l == 1,
+        do:
+          <<payload_descriptor.tid::3, payload_descriptor.u::1, payload_descriptor.sid::3,
+            payload_descriptor.d::1>>,
+        else: <<>>
+
+    p_diffs =
+      if p == 1 and f == 1,
+        do: payload_descriptor.p_diffs |> Enum.map_join(&<<&1>>),
+        else: <<>>
+
+    tl0picidx = if payload_descriptor.tl0picidx, do: <<payload_descriptor.tl0picidx>>, else: <<>>
+
+    scalability_structure =
+      if v == 1,
+        do: serialize(payload_descriptor.scalability_structure),
+        else: <<>>
+
+    first_octet <> picture_id <> tid_u_sid_d <> p_diffs <> tl0picidx <> scalability_structure
+  end
+
+  def serialize(%ScalabilityStructure{} = ss) do
+    first_octet = ss.first_octet
+
+    dimensions = ss.dimensions |> Enum.map_join(&serialize(&1))
+
+    n_g = <<length(ss.pg_descriptions)>>
+
+    pg_descriptions = ss.pg_descriptions |> Enum.map_join(&serialize(&1))
+
+    first_octet <> dimensions <> n_g <> pg_descriptions
+  end
+
+  def serialize(%SSDimension{} = dimension) do
+    <<dimension.width::16, dimension.height::16>>
+  end
+
+  def serialize(%PGDescription{} = pg_description) do
+    r = length(pg_description.p_diffs)
+    p_diffs = pg_description.p_diffs |> Enum.map_join(&<<&1>>)
+
+    <<pg_description.tid::3, pg_description.u::1, r::2, 0::2>> <> p_diffs
   end
 
   @spec parse_payload_descriptor(binary()) :: {:error, :malformed_data} | {:ok, {t(), binary()}}
